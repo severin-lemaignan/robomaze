@@ -20,6 +20,16 @@ $(function() {
           size = scene.data.tilewidth;
       s = s.getContext("2d");
       if (scene.layers.length < scene.data.layers.length) {
+	if (layer.name == "Route") {// this is the route layer for our robots!! Send that to the backend
+		console.log("Sending the route map to the backend");
+		$.post('/api?map', 
+		       JSON.stringify(
+			{"width": layer.width,
+			 "height": layer.height,
+			 "data": layer.data})
+		     );
+	}
+
         layer.data.forEach(function(tile_idx, i) {
           if (!tile_idx) { return; }
           var img_x, img_y, s_x, s_y,
