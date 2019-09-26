@@ -1,14 +1,19 @@
 <!DOCTYPE html>
 <html lang='en-US'>
-  <head>
-    <title>Render Tiled Map Data to Canvas Using Javascript</title>
-    <meta charset='UTF-8' />
-    <script src="jquery-3.4.1.min.js" type="text/javascript"></script>
-    <script src="render_scene.js" type="text/javascript"></script>
-  </head>
-  <body>
-    <section>
-      <canvas height='3200' width='3200'></canvas>
-    </section>
-  </body>
+    <head>
+        <title>RoboMaze</title>
+        <meta charset='UTF-8' />
+        <script src="jquery-3.4.1.min.js" type="text/javascript"></script>
+        <script src="render_scene.js" type="text/javascript"></script>
+    </head>
+    <body>
+        <section>
+            <div style="position: relative;">
+                <canvas id="robotsLayer" width="3200" height="3200"
+                      style="position: absolute; left: 0; top: 0; z-index: 1;"></canvas>
+                <canvas id="backgroundLayer" width="3200" height="3200"
+                      style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>
+            </div>
+        </section>
+    </body>
 </html>

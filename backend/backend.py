@@ -19,7 +19,12 @@ maze = []
 width = 0
 height = 0
 
-robots = {}
+robots = {
+        "wall-e gerard": [10, 10],
+        "john": [1, 1],
+        "eve": [10, 7],
+        "wall-e2": [5, 1]
+        }
 
 def store_map(mapdata):
     global maze, width, height
@@ -80,6 +85,11 @@ def get_robot(name):
         return json.dumps([-1,-1])
     return json.dumps(robots[name])
 
+def get_robots():
+    robots["eve"][0] += 1
+    return json.dumps(robots)
+
+
 def move(name, direction):
     if name not in robots:
         return json.dumps([False,[]])
@@ -129,6 +139,9 @@ def app(environ, start_response):
         return ""
     else:
         options = urlparse.parse_qs(environ["QUERY_STRING"])
+
+        if "get_robots" in environ["QUERY_STRING"]:
+            return get_robots()
         if "set" in options:
             name,x,y = json.loads(options["set"][0])
             set_robot(name,x,y)
