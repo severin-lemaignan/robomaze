@@ -7,14 +7,34 @@ $(function() {
     var robotsLayerCanvas = $("#robotsLayer")[0];
     var c_robots = robotsLayerCanvas.getContext("2d");
     c_robots.font = "12px Arial";
+    var cloudsLayerCanvas = $("#cloudsLayer")[0];
+    var c_clouds = cloudsLayerCanvas.getContext("2d");
+
 
     var mapReady = new Event('mapready');
 
     var robotImg = new Image();
     robotImg.src = "res/wall-e.png";
 
+    var cloudImg = new Image();
+    cloudImg.src = "res/cloud.png";
+
+
     var robots = {};
     
+    var showClouds = function() {
+	c_clouds.fillStyle = "black";
+	c_clouds.globalCompositeOperation = 'source-over';
+	c_clouds.fillRect(0, 0, cloudsLayerCanvas.width, cloudsLayerCanvas.height);
+	c_clouds.globalCompositeOperation = 'destination-out';
+
+        for (var name in robots) {
+            x = robots[name][0] * tilesize;
+            y = robots[name][1] * tilesize;
+            c_clouds.drawImage(cloudImg, x, y);
+        }
+    };
+ 
     var showRobots = function() {
 	c_robots.clearRect(0, 0, robotsLayerCanvas.width, robotsLayerCanvas.height);
         for (var name in robots) {
@@ -106,6 +126,8 @@ $(function() {
                 $.get('/api?get_robots', function(data) {
                 robots = JSON.parse(data);
                 showRobots();
+		showClouds();
+			
             });
             }, 1000);
     }, false);
