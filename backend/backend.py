@@ -102,7 +102,7 @@ def get_robots():
 def create_new_robot(name):
     logger.info("Placing new robot %s at start position" % name)
     robots[name] = {"pos": STARTPOS,
-                    "lastinteraction": time.time(),
+                    "lastinteraction": 0,
                     "life": MAXLIFE
                     }
 
