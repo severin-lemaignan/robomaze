@@ -9,6 +9,8 @@ $(function() {
     c_robots.font = "12px Arial";
     var cloudsLayerCanvas = $("#cloudsLayer")[0];
     var c_clouds = cloudsLayerCanvas.getContext("2d");
+    c_clouds.fillStyle = "black";
+    c_clouds.fillRect(0, 0, cloudsLayerCanvas.width, cloudsLayerCanvas.height);
 
 
     var mapReady = new Event('mapready');
@@ -23,7 +25,7 @@ $(function() {
     var robots = {};
 
     var showClouds = function() {
-        c_clouds.fillStyle = "rgba(0, 0, 0, .1)";
+        c_clouds.fillStyle = "rgba(0, 0, 0, .05)";
         c_clouds.globalCompositeOperation = 'source-over';
         c_clouds.fillRect(0, 0, cloudsLayerCanvas.width, cloudsLayerCanvas.height);
         c_clouds.globalCompositeOperation = 'destination-out';
@@ -31,7 +33,12 @@ $(function() {
         for (var name in robots) {
             x = robots[name][0] * tilesize + tilesize/2;
             y = robots[name][1] * tilesize + tilesize/2;
-            c_clouds.drawImage(cloudImg, x - cloudImg.width, y - cloudImg.height);
+	    angle = Math.random() * Math.PI * 2;
+	    c_clouds.save();
+	    c_clouds.translate(x,y);
+	    c_clouds.rotate(angle);
+            c_clouds.drawImage(cloudImg, - cloudImg.width/2, - cloudImg.height/2);
+	    c_clouds.restore();
         }
     };
 
@@ -121,14 +128,18 @@ $(function() {
     //  scene.load("mountain");
     scene.load("countryside");
 
+    setInterval(showClouds,200);
+
     document.addEventListener('mapready', function(e) {
         setInterval(function() {
             $.get('/api?get_robots', function(data) {
-                robots = JSON.parse(data);
-                showRobots();
-                showClouds();
 
+                newrobots = JSON.parse(data);
+		if (newrobots != robots) {
+			robots = newrobots;
+			showRobots();
+		}
             });
-        }, 1000);
+        }, 200);
     }, false);
 });
