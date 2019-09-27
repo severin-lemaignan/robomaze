@@ -121,7 +121,8 @@ $(function() {
             this.tileset.onload = $.proxy(this.renderLayers, this);
         },
         load: function(name) {
-            return $.getJSON("res/" + name + ".json").done($.proxy(this.loadTileset, this));
+            // note: appending timestamp to force a fresh reload everytime (bypass cache)
+            return $.getJSON("res/" + name + ".json?t=" + (new Date()).getTime()).done($.proxy(this.loadTileset, this));
         }
     };
 

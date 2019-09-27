@@ -24,9 +24,7 @@ MAXLIFE = 10
 MIN_TIME_BETWEEN_INTERACTIONS=0.2 #seconds
 
 robots = {
-        "wall-e gerard": {"pos":[10, 10], "lastinteraction":0, "life":10},
-        "eve": {"pos":[10, 7], "lastinteraction":0, "life":10},
-        "john": {"pos":[1, 1], "lastinteraction":0, "life":10}
+        "Wall-E": {"pos":[1, 1], "lastinteraction":0, "life":10}
         }
 
 def store_map(mapdata):
@@ -93,7 +91,6 @@ def get_robot(name):
     return json.dumps(robots[name]["pos"])
 
 def get_robots():
-    robots["eve"]["pos"][0] += 1
 
     res = {}
     for name,v in robots.items():
