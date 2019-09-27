@@ -21,22 +21,22 @@ $(function() {
 
 
     var robots = {};
-    
+
     var showClouds = function() {
-	c_clouds.fillStyle = "black";
-	c_clouds.globalCompositeOperation = 'source-over';
-	c_clouds.fillRect(0, 0, cloudsLayerCanvas.width, cloudsLayerCanvas.height);
-	c_clouds.globalCompositeOperation = 'destination-out';
+        c_clouds.fillStyle = "rgba(0, 0, 0, .1)";
+        c_clouds.globalCompositeOperation = 'source-over';
+        c_clouds.fillRect(0, 0, cloudsLayerCanvas.width, cloudsLayerCanvas.height);
+        c_clouds.globalCompositeOperation = 'destination-out';
 
         for (var name in robots) {
-            x = robots[name][0] * tilesize;
-            y = robots[name][1] * tilesize;
-            c_clouds.drawImage(cloudImg, x, y);
+            x = robots[name][0] * tilesize + tilesize/2;
+            y = robots[name][1] * tilesize + tilesize/2;
+            c_clouds.drawImage(cloudImg, x - cloudImg.width, y - cloudImg.height);
         }
     };
- 
+
     var showRobots = function() {
-	c_robots.clearRect(0, 0, robotsLayerCanvas.width, robotsLayerCanvas.height);
+        c_robots.clearRect(0, 0, robotsLayerCanvas.width, robotsLayerCanvas.height);
         for (var name in robots) {
             x = robots[name][0] * tilesize;
             y = robots[name][1] * tilesize;
@@ -123,12 +123,12 @@ $(function() {
 
     document.addEventListener('mapready', function(e) {
         setInterval(function() {
-                $.get('/api?get_robots', function(data) {
+            $.get('/api?get_robots', function(data) {
                 robots = JSON.parse(data);
                 showRobots();
-		showClouds();
-			
+                showClouds();
+
             });
-            }, 1000);
+        }, 1000);
     }, false);
 });
