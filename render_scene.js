@@ -37,7 +37,7 @@ $(function() {
     var robots = {};
 
     var showClouds = function() {
-        ctx_clouds.fillStyle = "rgba(0, 0, 0, .05)";
+        ctx_clouds.fillStyle = "rgba(0, 0, 0, .01)";
         ctx_clouds.globalCompositeOperation = 'source-over';
         ctx_clouds.fillRect(0, 0, cloudsLayerCanvas.width, cloudsLayerCanvas.height);
         ctx_clouds.globalCompositeOperation = 'destination-out';
