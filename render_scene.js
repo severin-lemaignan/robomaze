@@ -1,4 +1,15 @@
 
+String.prototype.hashCode = function() {
+  var hash = 0, i, chr;
+  if (this.length === 0) return hash;
+  for (i = 0; i < this.length; i++) {
+    chr   = this.charCodeAt(i);
+    hash  = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+};
+
 // code taken from: https://hashrocket.com/blog/posts/using-tiled-and-canvas-to-render-game-screens
 $(function() {
     var width = 0; var height = 0; var tilesize = 0;
@@ -67,13 +78,66 @@ $(function() {
             ctx_bg.drawImage(robotImg, x, y);
             ctx_bg.beginPath();
             textW = ctx_bg.measureText(name).width;
-            ctx_bg.rect(x - (textW - tilesize)/2, y + tilesize, textW + 2, 16);
-            ctx_bg.fillStyle = "rgba(255, 255, 255, .4)";
+            ctx_bg.rect(x - (textW - tilesize)/2, y + tilesize, textW + 4, 16);
+            //ctx_bg.fillStyle = "rgba(255, 255, 255, .4)";
+            ctx_bg.fillStyle = getRandomColor(name);
             ctx_bg.fill();
             ctx_bg.fillStyle = "rgba(0,0,0,1)";
             ctx_bg.fillText(name, x - (textW-tilesize)/2 + 2, y + tilesize + 12 + 1);
         }
     };
+
+    function random(seed) {
+    var x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+    }
+
+    var getRandomColor = function(name) {
+        var letters = '456789ABCDEF'; // removed 0123 to avoid dark colors
+        var color = '#';
+        for (var i = 0; i < 6; i++) {
+            color += letters[Math.floor(random(name.hashCode() + i) * 12)];
+        }
+        return color;
+    }
+
+    var pad = function(n, width, z) {
+        z = z || '0';
+        n = n + '';
+        return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
+    }
+
+    var mmss = function(secs) {
+        return pad(Math.floor(secs / 60),2) + ":" + pad(Math.floor(secs % 60), 2)
+    }
+
+
+    var robotsList = function() {
+
+        // nb of robots has changed? remove of robots from the list and recreate it from scratch
+        if (Object.keys(robots).length != $("#robot_list").children().length) {
+            $("#robot_list").empty();
+            redraw();
+        }
+
+        for (var name in robots) {
+
+            if ($('#' + name + '_box').length) {
+                $('#' + name + '_life').text(robots[name].life);
+                $('#' + name + '_age').text(mmss(robots[name].age));
+            }
+            else {
+                var robotBox = $("<span class='robotbox' id='" + name + "_box'  ></span>");
+                robotBox.css("background-color", getRandomColor(name));
+                var img = $("<img src='res/wall-e.png' />");
+                robotBox.append(img);
+                robotBox.append($("<br/><b>" + name + "</b>"));
+                robotBox.append("<br/>❤️<span id='" + name + "_life'>" + robots[name].life + "</span>");
+                robotBox.append("<br/><span id='" + name + "_age'>" + mmss(robots[name].age) + "</span>");
+                $("#robot_list").append(robotBox);
+            }
+        }
+    }
 
     var scene = {
         layers: [],
@@ -160,14 +224,15 @@ $(function() {
             $.get('/api?get_robots', function(data) {
 
                 newrobots = JSON.parse(data);
+                robotsList();
                 for (const [key, value] of Object.entries(newrobots)) {
-                  if (!(key in robots) || 
-                      (newrobots[key].pos[0] != robots[key].pos[0]) ||
-                      (newrobots[key].pos[1] != robots[key].pos[1])) {
-                      robots = newrobots;
-                      redraw();
-                      break;
-                  }
+                    if (!(key in robots) || 
+                        (newrobots[key].pos[0] != robots[key].pos[0]) ||
+                        (newrobots[key].pos[1] != robots[key].pos[1])) {
+                        robots = newrobots;
+                        redraw();
+                        break;
+                    }
                 }
                 robots = newrobots;
             });

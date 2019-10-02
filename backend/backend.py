@@ -96,7 +96,28 @@ def get_robot(name):
 
 def get_robots():
 
-    return json.dumps(robots)
+    now = time.time()
+    
+    complete_robots = dict(robots)
+    
+    for k in list(robots.keys()):
+        if robots[k]["life"] <= 0:
+            logger.warning("Robot %s has no life left! killing it!" % k)
+            del robots[k]
+            del complete_robots[k]
+            continue
+
+        if now - robots[k]["lastinteraction"] > 60 * 10:
+            logger.warning("Robot %s has not being used for 10 min. Removing it." % k)
+            del robots[k]
+            del complete_robots[k]
+            continue
+
+
+
+        complete_robots[k]["age"] = now - robots[k]["created"]
+
+    return json.dumps(complete_robots)
 
 
 def create_new_robot(name):
