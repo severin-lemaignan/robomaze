@@ -18,7 +18,7 @@ $(function() {
     var ctx_clouds = cloudsLayerCanvas.getContext("2d");
     cloudsLayerCanvas.width = bgLayerCanvas.width;
     cloudsLayerCanvas.height = bgLayerCanvas.height;
-  
+
 
     // track drag and zoom on ctx_cloud
     trackTransforms(ctx_clouds);
@@ -37,13 +37,13 @@ $(function() {
     ctx_cloudsCanvas = cloudsCanvas.getContext("2d");
     ctx_cloudsCanvas.fillStyle = "black";
     ctx_cloudsCanvas.fillRect(0, 0, cloudsCanvas.width, cloudsCanvas.height);
- 
+
     var fogOfWar = new Image;
 
 
     var robots = {};
 
-    var showClouds = function() {
+    var drawClouds = function() {
         ctx_cloudsCanvas.fillStyle = "rgba(0, 0, 0, .01)";
         ctx_cloudsCanvas.globalCompositeOperation = 'source-over';
         ctx_cloudsCanvas.fillRect(0, 0, cloudsCanvas.width, cloudsCanvas.height);
@@ -59,10 +59,10 @@ $(function() {
             ctx_cloudsCanvas.drawImage(cloudImg, - cloudImg.width/2, - cloudImg.height/2);
             ctx_cloudsCanvas.restore();
         }
-	
-	fogOfWar = ctx_cloudsCanvas.canvas;
-	
-	ctx_clouds.drawImage(fogOfWar, 0, 0);
+
+        //fogOfWar = ctx_cloudsCanvas.canvas;
+
+        //ctx_clouds.drawImage(fogOfWar, 0, 0);
     };
 
     var showRobots = function() {
@@ -154,7 +154,12 @@ $(function() {
     //  scene.load("mountain");
     scene.load("countryside");
 
-    setInterval(showClouds,200);
+    setInterval(function() {
+        drawClouds();
+        ctx_clouds.clearRect(0,0,cloudsCanvas.width,cloudsCanvas.height);
+        ctx_clouds.drawImage(ctx_cloudsCanvas.canvas, 0, 0);
+    }
+        ,200);
 
     document.addEventListener('mapready', function(e) {
         setInterval(function() {
@@ -171,96 +176,95 @@ $(function() {
 
     function redraw(){
 
-          // Clear the entire canvas
-          var p1 = ctx_clouds.transformedPoint(0,0);
-          var p2 = ctx_clouds.transformedPoint(cloudsLayerCanvas.width,cloudsLayerCanvas.height);
-          ctx_bg.clearRect(p1.x,p1.y,p2.x-p1.x,p2.y-p1.y);
-          ctx_robots.clearRect(p1.x,p1.y,p2.x-p1.x,p2.y-p1.y);
-          ctx_clouds.clearRect(p1.x,p1.y,p2.x-p1.x,p2.y-p1.y);
+        // Clear the entire canvas
+        var p1 = ctx_clouds.transformedPoint(0,0);
+        var p2 = ctx_clouds.transformedPoint(cloudsLayerCanvas.width,cloudsLayerCanvas.height);
+        ctx_bg.clearRect(p1.x,p1.y,p2.x-p1.x,p2.y-p1.y);
+        ctx_robots.clearRect(p1.x,p1.y,p2.x-p1.x,p2.y-p1.y);
+        ctx_clouds.clearRect(p1.x,p1.y,p2.x-p1.x,p2.y-p1.y);
 
-          ctx_bg.save();
-          ctx_clouds.save();
-          ctx_robots.save();
-          ctx_bg.setTransform(1,0,0,1,0,0);
-          ctx_robots.setTransform(1,0,0,1,0,0);
-          ctx_clouds.setTransform(1,0,0,1,0,0);
-          ctx_bg.clearRect(0,0,bgLayerCanvas.width,bgLayerCanvas.height);
-          ctx_clouds.clearRect(0,0,bgLayerCanvas.width,bgLayerCanvas.height);
-          ctx_robots.clearRect(0,0,bgLayerCanvas.width,bgLayerCanvas.height);
-          ctx_bg.restore();
-          ctx_robots.restore();
-          ctx_clouds.restore();
+        ctx_bg.save();
+        ctx_clouds.save();
+        ctx_robots.save();
+        ctx_bg.setTransform(1,0,0,1,0,0);
+        ctx_robots.setTransform(1,0,0,1,0,0);
+        ctx_clouds.setTransform(1,0,0,1,0,0);
+        ctx_bg.clearRect(0,0,bgLayerCanvas.width,bgLayerCanvas.height);
+        ctx_clouds.clearRect(0,0,bgLayerCanvas.width,bgLayerCanvas.height);
+        ctx_robots.clearRect(0,0,bgLayerCanvas.width,bgLayerCanvas.height);
+        ctx_bg.restore();
+        ctx_robots.restore();
+        ctx_clouds.restore();
 
-          // redraw the tile layers
-          for (var layer_idx in scene.layers) {
-              var img = new Image;
-              img.src = scene.layers[layer_idx];
-              ctx_bg.drawImage(img, 0, 0);
-          }
-	  showRobots();
-
-	  var imgClouds = new Image;
-	  ctx_clouds.drawImage(fogOfWar, 0, 0);
-
-          //scene.data.layers.forEach(scene.renderLayer);
-
+        // redraw the tile layers
+        for (var layer_idx in scene.layers) {
+            var img = new Image;
+            img.src = scene.layers[layer_idx];
+            ctx_bg.drawImage(img, 0, 0);
         }
+        showRobots();
 
-      var lastX=bgLayerCanvas.width/2, lastY=bgLayerCanvas.height/2;
+        ctx_clouds.drawImage(ctx_cloudsCanvas.canvas, 0, 0);
 
-      var dragStart,dragged;
+        //scene.data.layers.forEach(scene.renderLayer);
 
-      cloudsLayerCanvas.addEventListener('mousedown',function(evt){
-          document.body.style.mozUserSelect = document.body.style.webkitUserSelect = document.body.style.userSelect = 'none';
-          lastX = evt.offsetX || (evt.pageX - bgLayerCanvas.offsetLeft);
-          lastY = evt.offsetY || (evt.pageY - bgLayerCanvas.offsetTop);
-          dragStart = ctx_clouds.transformedPoint(lastX,lastY);
-          dragged = false;
-      },false);
+    }
 
-      cloudsLayerCanvas.addEventListener('mousemove',function(evt){
-          lastX = evt.offsetX || (evt.pageX - bgLayerCanvas.offsetLeft);
-          lastY = evt.offsetY || (evt.pageY - bgLayerCanvas.offsetTop);
-          dragged = true;
-          if (dragStart){
+    var lastX=bgLayerCanvas.width/2, lastY=bgLayerCanvas.height/2;
+
+    var dragStart,dragged;
+
+    cloudsLayerCanvas.addEventListener('mousedown',function(evt){
+        document.body.style.mozUserSelect = document.body.style.webkitUserSelect = document.body.style.userSelect = 'none';
+        lastX = evt.offsetX || (evt.pageX - bgLayerCanvas.offsetLeft);
+        lastY = evt.offsetY || (evt.pageY - bgLayerCanvas.offsetTop);
+        dragStart = ctx_clouds.transformedPoint(lastX,lastY);
+        dragged = false;
+    },false);
+
+    cloudsLayerCanvas.addEventListener('mousemove',function(evt){
+        lastX = evt.offsetX || (evt.pageX - bgLayerCanvas.offsetLeft);
+        lastY = evt.offsetY || (evt.pageY - bgLayerCanvas.offsetTop);
+        dragged = true;
+        if (dragStart){
             var pt = ctx_clouds.transformedPoint(lastX,lastY);
             ctx_bg.translate(pt.x-dragStart.x,pt.y-dragStart.y);
             ctx_robots.translate(pt.x-dragStart.x,pt.y-dragStart.y);
             ctx_clouds.translate(pt.x-dragStart.x,pt.y-dragStart.y);
             redraw();
-                }
-      },false);
+        }
+    },false);
 
-      cloudsLayerCanvas.addEventListener('mouseup',function(evt){
-          dragStart = null;
-          if (!dragged) zoom(evt.shiftKey ? -1 : 1 );
-      },false);
+    cloudsLayerCanvas.addEventListener('mouseup',function(evt){
+        dragStart = null;
+        if (!dragged) zoom(evt.shiftKey ? -1 : 1 );
+    },false);
 
-      var scaleFactor = 1.1;
+    var scaleFactor = 1.1;
 
-      var zoom = function(clicks){
-          var pt = ctx_clouds.transformedPoint(lastX,lastY);
-          ctx_bg.translate(pt.x,pt.y);
-          ctx_robots.translate(pt.x,pt.y);
-          ctx_clouds.translate(pt.x,pt.y);
-          var factor = Math.pow(scaleFactor,clicks);
-          ctx_bg.scale(factor,factor);
-          ctx_robots.scale(factor,factor);
-          ctx_clouds.scale(factor,factor);
-          ctx_bg.translate(-pt.x,-pt.y);
-          ctx_robots.translate(-pt.x,-pt.y);
-          ctx_clouds.translate(-pt.x,-pt.y);
-          redraw();
-      }
+    var zoom = function(clicks){
+        var pt = ctx_clouds.transformedPoint(lastX,lastY);
+        ctx_bg.translate(pt.x,pt.y);
+        ctx_robots.translate(pt.x,pt.y);
+        ctx_clouds.translate(pt.x,pt.y);
+        var factor = Math.pow(scaleFactor,clicks);
+        ctx_bg.scale(factor,factor);
+        ctx_robots.scale(factor,factor);
+        ctx_clouds.scale(factor,factor);
+        ctx_bg.translate(-pt.x,-pt.y);
+        ctx_robots.translate(-pt.x,-pt.y);
+        ctx_clouds.translate(-pt.x,-pt.y);
+        redraw();
+    }
 
-      var handleScroll = function(evt){
-          var delta = evt.wheelDelta ? evt.wheelDelta/40 : evt.detail ? -evt.detail : 0;
-          if (delta) zoom(delta);
-          return evt.preventDefault() && false;
-      };
+    var handleScroll = function(evt){
+        var delta = evt.wheelDelta ? evt.wheelDelta/40 : evt.detail ? -evt.detail : 0;
+        if (delta) zoom(delta);
+        return evt.preventDefault() && false;
+    };
 
-      cloudsLayerCanvas.addEventListener('DOMMouseScroll',handleScroll,false);
-      cloudsLayerCanvas.addEventListener('mousewheel',handleScroll,false);
+    cloudsLayerCanvas.addEventListener('DOMMouseScroll',handleScroll,false);
+    cloudsLayerCanvas.addEventListener('mousewheel',handleScroll,false);
 });
 
 
