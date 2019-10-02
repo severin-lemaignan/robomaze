@@ -23,12 +23,16 @@ STARTPOS=[1,1]
 MAXLIFE = 10
 MIN_TIME_BETWEEN_INTERACTIONS=0.2 #seconds
 
-robots = {
-        "Wall-E": {"pos":[1, 1], "lastinteraction":0, "life":10}
-        }
+robots = {}
 
 def store_map(mapdata):
+
     global maze, width, height
+
+    if is_map_loaded():
+        logger.warning("Map already loaded. Ignoring it. Restart the backend if you want to update the map.")
+        return
+
 
     rawmaze = json.loads(mapdata)
 
@@ -92,16 +96,13 @@ def get_robot(name):
 
 def get_robots():
 
-    res = {}
-    for name,v in robots.items():
-        res[name] = v["pos"]
-
-    return json.dumps(res)
+    return json.dumps(robots)
 
 
 def create_new_robot(name):
     logger.info("Placing new robot %s at start position" % name)
     robots[name] = {"pos": STARTPOS,
+                    "created": time.time(),
                     "lastinteraction": 0,
                     "life": MAXLIFE
                     }
