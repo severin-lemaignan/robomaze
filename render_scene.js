@@ -7,12 +7,7 @@ $(function() {
     bgLayerCanvas.width = window.innerWidth;
     bgLayerCanvas.height = window.innerHeight;
     var ctx_bg = bgLayerCanvas.getContext("2d");
-
-    var robotsLayerCanvas = $("#robotsLayer")[0];
-    robotsLayerCanvas.width = bgLayerCanvas.width;
-    robotsLayerCanvas.height = bgLayerCanvas.height;
-    var ctx_robots = robotsLayerCanvas.getContext("2d");
-    ctx_robots.font = "12px Arial";
+    ctx_bg.font = "12px Arial";
 
     var cloudsLayerCanvas = $("#cloudsLayer")[0];
     var ctx_clouds = cloudsLayerCanvas.getContext("2d");
@@ -50,8 +45,8 @@ $(function() {
         ctx_cloudsCanvas.globalCompositeOperation = 'destination-out';
 
         for (var name in robots) {
-            x = robots[name][0] * tilesize + tilesize/2;
-            y = robots[name][1] * tilesize + tilesize/2;
+            x = robots[name].pos[0] * tilesize + tilesize/2;
+            y = robots[name].pos[1] * tilesize + tilesize/2;
             angle = Math.random() * Math.PI * 2;
             ctx_cloudsCanvas.save();
             ctx_cloudsCanvas.translate(x,y);
@@ -66,18 +61,17 @@ $(function() {
     };
 
     var showRobots = function() {
-        ctx_robots.clearRect(0, 0, robotsLayerCanvas.width, robotsLayerCanvas.height);
         for (var name in robots) {
-            x = robots[name][0] * tilesize;
-            y = robots[name][1] * tilesize;
-            ctx_robots.drawImage(robotImg, x, y);
-            ctx_robots.beginPath();
-            textW = ctx_robots.measureText(name).width;
-            ctx_robots.rect(x - (textW - tilesize)/2, y + tilesize, textW + 2, 16);
-            ctx_robots.fillStyle = "rgba(255, 255, 255, .4)";
-            ctx_robots.fill();
-            ctx_robots.fillStyle = "rgba(0,0,0,1)";
-            ctx_robots.fillText(name, x - (textW-tilesize)/2 + 2, y + tilesize + 12 + 1);
+            x = robots[name].pos[0] * tilesize;
+            y = robots[name].pos[1] * tilesize;
+            ctx_bg.drawImage(robotImg, x, y);
+            ctx_bg.beginPath();
+            textW = ctx_bg.measureText(name).width;
+            ctx_bg.rect(x - (textW - tilesize)/2, y + tilesize, textW + 2, 16);
+            ctx_bg.fillStyle = "rgba(255, 255, 255, .4)";
+            ctx_bg.fill();
+            ctx_bg.fillStyle = "rgba(0,0,0,1)";
+            ctx_bg.fillText(name, x - (textW-tilesize)/2 + 2, y + tilesize + 12 + 1);
         }
     };
 
@@ -166,10 +160,16 @@ $(function() {
             $.get('/api?get_robots', function(data) {
 
                 newrobots = JSON.parse(data);
-                if (newrobots != robots) {
-                    robots = newrobots;
-                    showRobots();
+                for (const [key, value] of Object.entries(newrobots)) {
+                  if (!(key in robots) || 
+                      (newrobots[key].pos[0] != robots[key].pos[0]) ||
+                      (newrobots[key].pos[1] != robots[key].pos[1])) {
+                      robots = newrobots;
+                      redraw();
+                      break;
+                  }
                 }
+                robots = newrobots;
             });
         }, 200);
     }, false);
@@ -180,20 +180,14 @@ $(function() {
         var p1 = ctx_clouds.transformedPoint(0,0);
         var p2 = ctx_clouds.transformedPoint(cloudsLayerCanvas.width,cloudsLayerCanvas.height);
         ctx_bg.clearRect(p1.x,p1.y,p2.x-p1.x,p2.y-p1.y);
-        ctx_robots.clearRect(p1.x,p1.y,p2.x-p1.x,p2.y-p1.y);
         ctx_clouds.clearRect(p1.x,p1.y,p2.x-p1.x,p2.y-p1.y);
-
         ctx_bg.save();
         ctx_clouds.save();
-        ctx_robots.save();
         ctx_bg.setTransform(1,0,0,1,0,0);
-        ctx_robots.setTransform(1,0,0,1,0,0);
         ctx_clouds.setTransform(1,0,0,1,0,0);
         ctx_bg.clearRect(0,0,bgLayerCanvas.width,bgLayerCanvas.height);
         ctx_clouds.clearRect(0,0,bgLayerCanvas.width,bgLayerCanvas.height);
-        ctx_robots.clearRect(0,0,bgLayerCanvas.width,bgLayerCanvas.height);
         ctx_bg.restore();
-        ctx_robots.restore();
         ctx_clouds.restore();
 
         // redraw the tile layers
@@ -229,7 +223,6 @@ $(function() {
         if (dragStart){
             var pt = ctx_clouds.transformedPoint(lastX,lastY);
             ctx_bg.translate(pt.x-dragStart.x,pt.y-dragStart.y);
-            ctx_robots.translate(pt.x-dragStart.x,pt.y-dragStart.y);
             ctx_clouds.translate(pt.x-dragStart.x,pt.y-dragStart.y);
             redraw();
         }
@@ -245,14 +238,11 @@ $(function() {
     var zoom = function(clicks){
         var pt = ctx_clouds.transformedPoint(lastX,lastY);
         ctx_bg.translate(pt.x,pt.y);
-        ctx_robots.translate(pt.x,pt.y);
         ctx_clouds.translate(pt.x,pt.y);
         var factor = Math.pow(scaleFactor,clicks);
         ctx_bg.scale(factor,factor);
-        ctx_robots.scale(factor,factor);
         ctx_clouds.scale(factor,factor);
         ctx_bg.translate(-pt.x,-pt.y);
-        ctx_robots.translate(-pt.x,-pt.y);
         ctx_clouds.translate(-pt.x,-pt.y);
         redraw();
     }
