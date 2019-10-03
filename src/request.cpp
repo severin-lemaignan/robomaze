@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
 {
 
     if (argc < 3) {
-        cout << "Usage: controller <name robot> <direction>" << endl;
+        cout << "Usage: request <name robot> <direction>" << endl;
         return 1;
     }
 
