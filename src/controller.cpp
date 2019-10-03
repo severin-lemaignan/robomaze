@@ -1,6 +1,9 @@
 #include <iostream>
 #include <string>
 
+#include <thread> // std::this_thread::sleep_for
+#include <chrono> // std::chrono::seconds
+
 #include <cpprest/http_client.h>
 
 #include "astar.h"
@@ -9,6 +12,8 @@ using namespace std;
 using namespace web;                        // Common features like URIs.
 using namespace web::http;                  // Common HTTP functionality
 using namespace web::http::client;          // HTTP client features
+
+using namespace std::chrono_literals;
 
 int main(int argc, char* argv[])
 {
@@ -39,12 +44,22 @@ int main(int argc, char* argv[])
                 auto json_response = response.extract_json(true).get();
                 cout << json_response << endl;
                 cout << "Was move successful? " << json_response[0] << endl;
+
+                Obstacle obstacles = {json_response[1][0].as_bool(),
+                                      json_response[1][1].as_bool(),
+                                      json_response[1][2].as_bool(),
+                                      json_response[1][3].as_bool()};
+
+
+                next_move = astar.getNextMove(obstacles);
+
+                this_thread::sleep_for(250ms);
             }
             else {
                 cout << "Error!" << endl;
+                break;
             }
 
-            next_move = astar.getNextMove();
     }
 
     return 0;
