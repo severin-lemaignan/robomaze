@@ -30,17 +30,52 @@
             </header>
             <section>
 
-                <h1>Move a robot</h1>
+                <h1>RoboMaze</h1>
+
+                <center><b>
+                        <p> Your task is to lead your robot across the maze
+                        (without leaving the safety of the path!). You start at
+                        position <code>(1,1)</code> and you need to reach
+                        coordinate <code>(98,98)</code>.</p>
+
+
+                        <p><a href="map.html">Go to the live map</a></p>
+                </b></center>
+
+                <p>You can control your robot by sending <code>GET</code> HTTP
+                requests to the RoboMaze REST API endpoint:
+                <code>https://robomaze.skadge.org/api</code>. See below for the
+                available requests.</p>
+
+                <blockquote>
+                    <p>A robot that remains inactive for more that 10min is automatically removed.</p>
+                </blockquote>
+
+                <blockquote>
+                    <p>You need to wait at least 200ms between two commands. Otherwise, your command will be ignored.</p>
+                </blockquote>
+
+                <h2>Move a robot</h2>
 
                 <p> To move your robot in the map, use the action <code>move</code>, with two options: the name of your robot, and the direction of the move: North <code>N</code>, South <code>S</code>, East <code>E</code> or West <code>W</code>.
 
+                <blockquote>
+                    <p>If your robot does not exist yet (or has been killed), calling <code>move</code> will first create it at the coordinate <code>(1,1)</code></p>
+                </blockquote>
+
+                <p><b>Returns:</b> a JSON object <pre>[&lt;move successful?&gt;, [&lt;obstacle at N?&gt;, &lt;S?&gt;, &lt;E?&gt;, &lt;W?&gt;]]</pre>
+
+
                 Examples:
-                <pre><code class="python">import json
+                <pre><code class="bash"># from a terminal
+curl 'https://robomaze.skadge.org/api?move=\["Wall-E","E"\]'</code></pre>
+
+                <pre><code class="python"># in python
+import json
 import requests
 
 REST_ENDPOINT = "https://robomaze.skadge.org/api"
-requests.get(REST_ENDPOINT + "?move=" + json.dumps(["Wall-E", "N"]))
-                </code></pre>
+requests.get(REST_ENDPOINT + "?move=" + json.dumps(["Wall-E", "N"]))</code></pre>
 
             </section>
             <footer>
