@@ -23,7 +23,6 @@ def astar(start, goal):
   come_from = {} # needed to reconstruct shortest path
 
   nodes_to_visit = [(start,0)] # (node, 'total' cost)
-  visited_nodes = []
 
   while nodes_to_visit:
     node, _ = pop_best_node(nodes_to_visit)
