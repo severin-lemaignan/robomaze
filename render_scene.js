@@ -55,6 +55,27 @@ $(function() {
         ctx_cloudsCanvas.fillRect(0, 0, cloudsCanvas.width, cloudsCanvas.height);
         ctx_cloudsCanvas.globalCompositeOperation = 'destination-out';
 
+        // starting point
+        x = 1 * tilesize + tilesize/2;
+        y = 1 * tilesize + tilesize/2;
+        angle = Math.random() * Math.PI * 2;
+        ctx_cloudsCanvas.save();
+        ctx_cloudsCanvas.translate(x,y);
+        ctx_cloudsCanvas.rotate(angle);
+        ctx_cloudsCanvas.drawImage(cloudImg, - cloudImg.width/2, - cloudImg.height/2);
+        ctx_cloudsCanvas.restore();
+
+        // end goal
+        x = 98 * tilesize + tilesize/2;
+        y = 98 * tilesize + tilesize/2;
+        angle = Math.random() * Math.PI * 2;
+        ctx_cloudsCanvas.save();
+        ctx_cloudsCanvas.translate(x,y);
+        ctx_cloudsCanvas.rotate(angle);
+        ctx_cloudsCanvas.drawImage(cloudImg, - cloudImg.width/2, - cloudImg.height/2);
+        ctx_cloudsCanvas.restore();
+
+
         for (var name in robots) {
             x = robots[name].pos[0] * tilesize + tilesize/2;
             y = robots[name].pos[1] * tilesize + tilesize/2;
