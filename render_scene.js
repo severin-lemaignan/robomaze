@@ -136,9 +136,13 @@ $(function() {
     var robotsList = function() {
 
         // nb of robots has changed? remove of robots from the list and recreate it from scratch
-        if (Object.keys(robots).length != $("#robot_list").children().length) {
+        if (Object.keys(robots).length != $("#robot_list .robotbox").children().length) {
             $("#robot_list").empty();
             redraw();
+            if (Object.keys(robots).length == 0) {
+                $("#robot_list").append($("<h1>No robot yet!</h1>"));
+                return;
+            }
         }
 
         for (var name in robots) {
