@@ -12,7 +12,7 @@ typedef std::tuple<Position, int> Node; // {position, score}
 typedef std::vector<Node> NodesList;
 typedef std::tuple<bool, bool, bool, bool> Obstacle;
 
-const int MAZE_SIZE = 10;
+const int MAZE_SIZE = 100;
 const Position START_POS {1, 1};
 const Position END_GOAL {98, 98};
 
@@ -20,13 +20,10 @@ class AStar
 {
 public:
     AStar();
-
-
     std::string getNextMove(Obstacle obstacle);
 
 private:
 
-    Position planNextPosition();
 
     // contains our maze (the portion we have already explored, anyway)
     // 'true' means 'there is a wall'
@@ -34,9 +31,10 @@ private:
 
     Position current_position;
 
+    Position planNextPosition();
     unsigned int heuristic(Position node, Position goal);
     Position pop_best_node(NodesList& nodes);
-    bool isFree(Position node);
+    bool is_free(Position node);
     std::vector<Position> neighbours(Position node);
 };
 
