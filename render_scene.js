@@ -96,15 +96,18 @@ $(function() {
         for (var name in robots) {
             x = robots[name].pos[0] * tilesize;
             y = robots[name].pos[1] * tilesize;
-            ctx_bg.drawImage(robotImg, x, y);
+            theta = robots[name].pos[2];
+            ctx_bg.translate(x,y)
+            ctx_bg.rotate(theta)
+            ctx_bg.drawImage(robotImg, 0, 0);
             ctx_bg.beginPath();
             textW = ctx_bg.measureText(name).width;
-            ctx_bg.rect(x - (textW - tilesize)/2, y + tilesize, textW + 4, 16);
+            ctx_bg.rect(- (textW - tilesize)/2, tilesize, textW + 4, 16);
             //ctx_bg.fillStyle = "rgba(255, 255, 255, .4)";
             ctx_bg.fillStyle = getRandomColor(name);
             ctx_bg.fill();
             ctx_bg.fillStyle = "rgba(0,0,0,1)";
-            ctx_bg.fillText(name, x - (textW-tilesize)/2 + 2, y + tilesize + 12 + 1);
+            ctx_bg.fillText(name, - (textW-tilesize)/2 + 2, tilesize + 12 + 1);
         }
     };
 

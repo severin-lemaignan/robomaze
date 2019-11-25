@@ -19,7 +19,26 @@ maze = []
 width = 0
 height = 0
 
-STARTPOS=[1,1]
+
+"""
+
+Robot orientation:
+
+0,0 +-------------------
+    |  theta=90
+    |  
+    |  y
+    |  ^    theta=45
+    |  |
+    |  R--> x   theta=0
+    |
+
+- x,y relative to map origin (top left corner)
+- theta stored in radians
+- one unit (along x/y) is equal to one tile
+"""
+
+STARTPOS=[1.,-1.,0.]
 MAXLIFE = 10
 MIN_TIME_BETWEEN_INTERACTIONS=0.2 #seconds
 
@@ -55,7 +74,11 @@ def store_map(mapdata):
 def is_map_loaded():
     return width and height
 
-def get_obstacles(x,y):
+def get_obstacles(x,y,theta):
+
+    ######### TODO
+    # disable obstacle detection for now
+    return [False, False, False, False, False]
 
     # obstacle at centre, north, south, east, west?
     obstacles = [True, True, True, True, True]
@@ -78,15 +101,15 @@ def get_obstacles(x,y):
     logger.info(str(obstacles))
     return obstacles
 
-def set_robot(name, x, y):
-    logger.info("Placing robot %s to %s,%s" % (name,x,y))
+def set_robot(name, x, y,theta):
+    logger.info("Placing robot %s to (x=%s,y=%s,theta=%s)" % (name,x,y,theta))
 
-    c,_,_,_,_ = get_obstacles(x,y)
+    c,_,_,_,_ = get_obstacles(x,y,theta)
     if c:
         logger.info("Can not place robot there!")
         return json.dumps(False)
 
-    robots[name]["pos"] = [x,y]
+    robots[name]["pos"] = [x,y,theta]
     return json.dumps(True)
 
 def get_robot(name):
@@ -194,8 +217,11 @@ def app(environ, start_response):
         if "get_robots" in environ["QUERY_STRING"]:
             return get_robots()
         if "set" in options:
-            name,x,y = json.loads(options["set"][0])
-            return set_robot(name,x,y)
+            name,x,y,theta = json.loads(options["set"][0])
+            return set_robot(name,x,y,theta)
+        if "cmd_vel" in options:
+            name,v,w = json.loads(options["cmd_vel"][0])
+            return cmd_vel_robot(name,v,w)
         if "move" in options:
             name,direction = json.loads(options["move"][0])
             return move(name,direction)
@@ -207,6 +233,6 @@ def app(environ, start_response):
         return ""
 
 
-logger.info("ROBOMAZE backend. Starting to API...")
+logger.info("ROBOMAZE backend. Starting the API...")
 WSGIServer(app, bindAddress = ("127.0.0.1", 8081)).run()
 logger.info("Bye bye.")
