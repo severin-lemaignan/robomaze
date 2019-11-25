@@ -8,7 +8,8 @@ import termios
 import json
 import requests
 
-URL = "https://robomaze.skadge.org/api?"
+#URL = "https://robomaze.skadge.org/api?"
+URL = "http://localhost/api?"
 
 def isData():
     return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
@@ -24,6 +25,9 @@ name = sys.argv[1]
 try:
     tty.setcbreak(sys.stdin.fileno())
 
+    v = 0.
+    w = 0.
+
     while 1:
         if isData():
             c = sys.stdin.read(1)
@@ -31,13 +35,15 @@ try:
             if c == '\x1b':         # x1b is ESC
                 arrow = ord(sys.stdin.read(2)[1].decode('utf-8'))
                 if arrow == 65: # up 
-                    requests.get(URL + "move=" + json.dumps([name, "N"]))
+                    v += 0.1
                 elif arrow == 66: # bottom
-                    requests.get(URL + "move=" + json.dumps([name, "S"]))
+                    v -= 0.1
                 elif arrow == 67: # right 
-                    requests.get(URL + "move=" + json.dumps([name, "E"]))
+                    w += 0.1
                 elif arrow == 68: # left 
-                    requests.get(URL + "move=" + json.dumps([name, "W"]))
+                    w -= 0.1
+                
+                requests.get(URL + "cmd_vel=" + json.dumps([name, v,w]))
 
             else:
                 print(key)

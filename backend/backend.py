@@ -112,10 +112,28 @@ def set_robot(name, x, y,theta):
     robots[name]["pos"] = [x,y,theta]
     return json.dumps(True)
 
+def compute_robot_position(name):
+
+    now = time.time()
+    delta = now - robots[name].get("lastposupdate", now)
+    robots[name]["lastposupdate"] = now
+
+    v,w = robots[name]["cmd_vel"]
+    dx = v * delta
+    dy = 0
+    dtheta = w * delta
+
+
+    x,y,theta = robots[name]["pos"]
+    robots[name]["pos"] = [x+dx, y+dy, theta+dtheta]
+
 def get_robot(name):
     if name not in robots:
         return json.dumps([-1,-1])
+    
+    compute_robot_position(k)
     return json.dumps(robots[name]["pos"])
+
 
 def get_robots():
 
@@ -137,6 +155,7 @@ def get_robots():
             continue
 
 
+        compute_robot_position(k)
 
         complete_robots[k]["age"] = now - robots[k]["created"]
 
@@ -146,10 +165,32 @@ def get_robots():
 def create_new_robot(name):
     logger.info("Placing new robot %s at start position" % name)
     robots[name] = {"pos": STARTPOS,
+                    "cmd_vel": [0,0],
                     "created": time.time(),
                     "lastinteraction": 0,
                     "life": MAXLIFE
                     }
+
+def cmd_vel_robot(name,v,w):
+    if not is_map_loaded():
+        logger.error("Map not loaded yet! Reload webpage.")
+        return json.dumps([False,[]])
+
+    if name not in robots:
+        create_new_robot(name)
+
+    logger.info("Setting (v,w) for robot %s to (%s,%s)" % (name,v,w))
+
+    now = time.time()
+    if now - robots[name]["lastinteraction"] < MIN_TIME_BETWEEN_INTERACTIONS:
+        logger.error("Too many interactions with %s. Wait a bit." % name)
+        return json.dumps([False,[]])
+
+    robots[name]["lastinteraction"] = now
+    compute_robot_position(name)
+    robots[name]["cmd_vel"] = [v,w]
+
+
 
 def move(name, direction):
     if not is_map_loaded():

@@ -78,7 +78,7 @@ $(function() {
 
         for (var name in robots) {
             x = robots[name].pos[0] * tilesize + tilesize/2;
-            y = robots[name].pos[1] * tilesize + tilesize/2;
+            y = -robots[name].pos[1] * tilesize + tilesize/2;
             angle = Math.random() * Math.PI * 2;
             ctx_cloudsCanvas.save();
             ctx_cloudsCanvas.translate(x,y);
@@ -95,8 +95,9 @@ $(function() {
     var showRobots = function() {
         for (var name in robots) {
             x = robots[name].pos[0] * tilesize;
-            y = robots[name].pos[1] * tilesize;
+            y = -robots[name].pos[1] * tilesize;
             theta = robots[name].pos[2];
+            ctx_bg.save();
             ctx_bg.translate(x,y)
             ctx_bg.rotate(theta)
             ctx_bg.drawImage(robotImg, 0, 0);
@@ -108,6 +109,7 @@ $(function() {
             ctx_bg.fill();
             ctx_bg.fillStyle = "rgba(0,0,0,1)";
             ctx_bg.fillText(name, - (textW-tilesize)/2 + 2, tilesize + 12 + 1);
+            ctx_bg.restore();
         }
     };
 
@@ -243,7 +245,8 @@ $(function() {
     setInterval(function() {
         drawClouds();
         ctx_clouds.clearRect(0,0,cloudsCanvas.width,cloudsCanvas.height);
-        ctx_clouds.drawImage(ctx_cloudsCanvas.canvas, 0, 0);
+        // TODO: disabled clouds
+        //ctx_clouds.drawImage(ctx_cloudsCanvas.canvas, 0, 0);
     }
         ,200);
 
@@ -256,7 +259,8 @@ $(function() {
                 for (const [key, value] of Object.entries(newrobots)) {
                     if (!(key in robots) || 
                         (newrobots[key].pos[0] != robots[key].pos[0]) ||
-                        (newrobots[key].pos[1] != robots[key].pos[1])) {
+                        (newrobots[key].pos[1] != robots[key].pos[1]) ||
+                        (newrobots[key].pos[2] != robots[key].pos[2])) {
                         robots = newrobots;
                         redraw();
                         break;
@@ -291,9 +295,9 @@ $(function() {
         }
         showRobots();
 
-        ctx_clouds.drawImage(ctx_cloudsCanvas.canvas, 0, 0);
+        // TODO: disabled clouds
+        //ctx_clouds.drawImage(ctx_cloudsCanvas.canvas, 0, 0);
 
-        //scene.data.layers.forEach(scene.renderLayer);
 
     }
 
