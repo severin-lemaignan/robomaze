@@ -66,7 +66,7 @@
                 <p><b>Returns:</b> a JSON object <pre>[&lt;move successful?&gt;, [&lt;obstacle at N?&gt;, &lt;S?&gt;, &lt;E?&gt;, &lt;W?&gt;]]</pre>
 
 
-                Examples:
+                <b>Examples:</b>
                 <pre><code class="bash"># from a terminal
 curl 'https://robomaze.skadge.org/api?move=\["Wall-E","E"\]'</code></pre>
 
@@ -76,6 +76,24 @@ import requests
 
 REST_ENDPOINT = "https://robomaze.skadge.org/api"
 requests.get(REST_ENDPOINT + "?move=" + json.dumps(["Wall-E", "N"]))</code></pre>
+
+                <h2>Remaining life of a robot</h2>
+
+                <p>Use the action <code>life</code>, with the name of your robot (as a JSON string).
+
+                <p><b>Returns:</b> the remaining life of the robot, or 0 if the robot does not exist (or has died).
+
+
+                <b>Examples:</b>
+                <pre><code class="bash"># from a terminal
+curl 'https://robomaze.skadge.org/api?life="Wall-E"'</code></pre>
+
+                <pre><code class="python"># in python
+import json
+import requests
+
+REST_ENDPOINT = "https://robomaze.skadge.org/api"
+requests.get(REST_ENDPOINT + "?life=" + json.dumps("Wall-E"))</code></pre>
 
             </section>
             <footer>

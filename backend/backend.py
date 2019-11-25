@@ -200,6 +200,10 @@ def app(environ, start_response):
             name,direction = json.loads(options["move"][0])
             return move(name,direction)
 
+        if "life" in options:
+            name = json.loads(options["life"][0])
+            return json.dumps(robots[name]["life"] if name in robots else 0)
+
         return ""
 
 
