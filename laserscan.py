@@ -35,8 +35,8 @@ def line_intersection(line1, line2):
 
 def is_obstacle(x_px,y_px):
 
-    x = int(floor(x_px/TILESIZE))
-    y = int(floor(y_px/TILESIZE))
+    x = int(floor(round(x_px)/TILESIZE))
+    y = int(floor(round(y_px)/TILESIZE))
 
     if x >= 0 and y >= 0 and x < WIDTH and y < HEIGHT and not maze[x + y * WIDTH]:
         return False
@@ -69,6 +69,8 @@ def cell_intersection(maze_x,maze_y, x, y, theta, max_dist, debug_img = None):
     C = (maze_x + TILESIZE), (maze_y + TILESIZE)
     D = maze_x, (maze_y + TILESIZE)
 
+    next_cell = None
+
     if debug_img is not None:
         cv2.line(debug_img, A, B , (150,250,150), 1)
         cv2.line(debug_img, C, B , (150,250,150), 1)
@@ -79,42 +81,49 @@ def cell_intersection(maze_x,maze_y, x, y, theta, max_dist, debug_img = None):
     R0 = x,y
     R1 = get_ray_point(x,y,theta, max_dist)
 
-    intersections = []
+    intersections = {}
 
-    for s in [(A,B), (B,C), (C,D), (D,A)]:
+    for s,direction in [((A,B),"up"), ((B,C),"right"), ((C,D),"down"), ((D,A),"left")]:
         intersect = segment_intersect(R0, R1, *s)
         if intersect:
-            intersections.append(line_intersection(s, (R0, R1)))
+            intersection = line_intersection(s, (R0, R1))
+            intersections[dist_to_robot(intersection)] = (intersection, direction)
             if debug_img is not None:
-                px,py = intersections[-1]
+                px,py = intersection
                 cv2.circle(debug_img, (int(px),int(py)), 3,(10,50,10),-1)
-
-    # sort interaction points, from the closest to the furthest to the robot
-    intersections.sort(key=dist_to_robot)
 
     # the ray does not cross this cell
     if not intersections:
         return None
 
+    max_dist = max(intersections.iterkeys())
+    min_dist = min(intersections.iterkeys())
+
     if len(intersections) != 2:
-        return intersections[0]
+        return intersections[min_dist][0]
 
     # the ray crosses the cell, but the cell is empty. Recursively looks for a wall
     if not is_obstacle(maze_x, maze_y):
-        next_maze_x, next_maze_y = int(floor(round(intersections[1][0])/TILESIZE)) * TILESIZE, int(floor(round(intersections[1][1])/TILESIZE)) * TILESIZE
-        #print(next_maze_x, next_maze_y)
-        if next_maze_x == maze_x and next_maze_y == maze_y:
-            # something went wrong: we're not moving!
-            import pdb;pdb.set_trace()
+        intersection, direction = intersections[max_dist]
+        next_maze_x, next_maze_y = maze_x, maze_y 
+        if direction == "up":
+            next_maze_y -= TILESIZE
+        if direction == "down":
+            next_maze_y += TILESIZE
+        if direction == "right":
+            next_maze_x += TILESIZE
+        if direction == "left":
+            next_maze_x -= TILESIZE
+
         return cell_intersection(next_maze_x, next_maze_y,x,y,theta,max_dist, debug_img)
 
     # the ray hits the cell, which is an obstacle. Returns the coordinate.
-    return intersections[0]
+    return intersections[min_dist][0]
 
     
         
 def get_neighbour_cells(x,y):
-    cx, cy = int(floor(x*1./TILESIZE)) * TILESIZE, int(floor(y*1./TILESIZE)) * TILESIZE
+    cx, cy = int(floor(round(x)*1./TILESIZE)) * TILESIZE, int(floor(round(y)*1./TILESIZE)) * TILESIZE
 
     # note: no need to include the diagonals - they will be visited from the side cells anyway
     return (cx-TILESIZE,cy), (cx,cy-TILESIZE), (cx,cy+TILESIZE), (cx+TILESIZE,cy)
@@ -135,32 +144,54 @@ def raycasting(x,y,theta, max_dist = 6 * TILESIZE, debug_img = None):
 
 
 def showmaze():
-    img = np.zeros((HEIGHT*TILESIZE,WIDTH*TILESIZE,3), np.uint8)
-    img[:] = (255,255,255)
+    global robot_x, robot_y, robot_theta
 
-    for i in range(HEIGHT):
-        for j in range(WIDTH):
-            if maze[j + WIDTH * i]:
-                cv2.rectangle(img, (j*TILESIZE, i*TILESIZE), 
-                                ((j+1)*TILESIZE, (i+1)*TILESIZE), 
-                                (128,0,255),-1)
+    show_maze = True
+    while True:
+        img = np.zeros((HEIGHT*TILESIZE,WIDTH*TILESIZE,3), np.uint8)
+        img[:] = (255,255,255)
 
-    X=int(robot_x)
-    Y=int(robot_y)
+        if show_maze:
+            for i in range(HEIGHT):
+                for j in range(WIDTH):
+                    if maze[j + WIDTH * i]:
+                        cv2.rectangle(img, (j*TILESIZE, i*TILESIZE), 
+                                        ((j+1)*TILESIZE, (i+1)*TILESIZE), 
+                                        (128,0,255),-1)
 
-    cv2.circle(img, (X,Y), TILESIZE/4,(255,128,0),-1)
-    cv2.line(img, (X,Y), (int(X + cos(robot_theta) * TILESIZE/2), int(Y + sin(robot_theta) * TILESIZE/2)), (255,255,0), 3)
+        X=int(robot_x)
+        Y=int(robot_y)
 
-    hitpoints = raycasting(robot_x, robot_y, robot_theta) #, debug_img=img)
-    for hit in hitpoints:
-        hx, hy = int(hit[0]), int(hit[1])
-        cv2.line(img, (X,Y), (hx,hy) , (200,200,200), 1)
-        cv2.circle(img, (hx,hy), 5,(10,10,10),-1)
+        cv2.circle(img, (X,Y), TILESIZE/4,(255,128,0),-1)
+        cv2.line(img, (X,Y), (int(X + cos(robot_theta) * TILESIZE/2), int(Y + sin(robot_theta) * TILESIZE/2)), (255,255,0), 3)
+
+        hitpoints = raycasting(robot_x, robot_y, robot_theta) #, debug_img=img)
+        for hit in hitpoints:
+            hx, hy = int(hit[0]), int(hit[1])
+            cv2.line(img, (X,Y), (hx,hy) , (200,200,200), 1)
+            cv2.circle(img, (hx,hy), 5,(10,10,10),-1)
 
 
 
-    cv2.imshow('Maze',img)
-    cv2.waitKey(0)
+        cv2.imshow('Maze',img)
+        key = cv2.waitKey()
+        print(key)
+        if key == 27:
+            break
+        if key == 83: # left
+            robot_theta += 0.1
+        if key == 81: # right
+            robot_theta -= 0.1
+        if key == 82: # up
+            robot_x += 10 * cos(robot_theta)
+            robot_y += 10 * sin(robot_theta)
+        if key == 84: # down
+            robot_x += -10 * cos(robot_theta)
+            robot_y += -10 * sin(robot_theta)
+        if key == 9: # tab
+            show_maze = not show_maze
+
+
     cv2.destroyAllWindows()
 
 
