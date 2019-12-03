@@ -6,6 +6,8 @@ from math import cos, sin,pi,floor,sqrt
 import rospy
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
+from geometry_msgs.msg import Twist
+
 import tf
 
 HEIGHT= 7
@@ -62,10 +64,11 @@ class Robot:
         self.scan_msg.range_min = self.range_min
         self.scan_msg.range_max = self.range_max
 
+        self.cmdvel_sub = rospy.Subscriber('%s/cmd_vel' % self.name, Twist, self.cmd_vel)
 
-    def cmd_vel(self,v,w):
-        self.v = v
-        self.w = w
+    def cmd_vel(self,msg):
+        self.v = msg.linear.x
+        self.w = msg.angular.z
 
     def step(self,dt):
 
