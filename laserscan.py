@@ -4,7 +4,7 @@ import numpy as np
 from math import cos, sin,pi,floor,sqrt
 
 import rospy
-#from nav_msgs.msg import Odometry
+from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 import tf
 
@@ -44,13 +44,13 @@ class Robot:
 
         self.br = tf.TransformBroadcaster()
 
-#        self.odom_pub = rospy.Publisher('%s/odom' % self.name, Odometry, queue_size=1)
-#        self.odom_msg = Odometry()
-#        self.odom_msg.header.frame_id = "map"
-#        self.odom_msg.child_frame_id = "%s_odom" % self.name
-#        self.odom_msg.pose.pose.position.z = 0.
-#        self.odom_msg.pose.pose.orientation.x = 0.
-#        self.odom_msg.pose.pose.orientation.y = 0.
+        self.odom_pub = rospy.Publisher('%s/odom' % self.name, Odometry, queue_size=1)
+        self.odom_msg = Odometry()
+        self.odom_msg.header.frame_id = "odom"
+        self.odom_msg.child_frame_id = self.base_frame
+        self.odom_msg.pose.pose.position.z = 0.
+        self.odom_msg.pose.pose.orientation.x = 0.
+        self.odom_msg.pose.pose.orientation.y = 0.
 
         self.scan_pub = rospy.Publisher('%s/scan' % self.name, LaserScan, queue_size=1)
         self.scan_msg = LaserScan()
@@ -73,14 +73,14 @@ class Robot:
         self.x += dt * cos(self.theta) * self.v
         self.y += dt * sin(self.theta) * self.v
 
-#        self.odom_msg.header.stamp = rospy.Time.now() 
-#        self.odom_msg.pose.pose.position.x = self.x
-#        self.odom_msg.pose.pose.position.y = self.y
-#        self.odom_msg.pose.pose.orientation = tf.transformations.quaternion_from_euler(0, 0, self.theta)
-#        #self.odom_msg.pose.pose.orientation.z = sin(self.theta)
-#        #self.odom_msg.pose.pose.orientation.w = cos(self.theta)
-#
-#        self.odom_pub.publish(self.odom_msg)
+        self.odom_msg.header.stamp = rospy.Time.now() 
+        self.odom_msg.pose.pose.position.x = self.x
+        self.odom_msg.pose.pose.position.y = self.y
+        #self.odom_msg.pose.pose.orientation = tf.transformations.quaternion_from_euler(0, 0, self.theta)
+        self.odom_msg.pose.pose.orientation.z = sin(self.theta)
+        self.odom_msg.pose.pose.orientation.w = cos(self.theta)
+
+        self.odom_pub.publish(self.odom_msg)
 
         self.br.sendTransform((self.x, self.y, 0),
                 tf.transformations.quaternion_from_euler(0, 0, self.theta),
