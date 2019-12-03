@@ -1,3 +1,4 @@
+import time
 import cv2
 import numpy as np
 from math import cos, sin,pi,floor
@@ -14,7 +15,29 @@ maze = [1,1,1,1,1,1,
         1,1,1,0,0,1,
         1,1,1,1,1,1]
 
-robot_x,robot_y,robot_theta = 1.5 * TILESIZE,1.47 * TILESIZE, 46 * pi/180
+class Robot:
+    def __init__(self,x=0., y=0., theta=0.):
+        self.x = x
+        self.y = y
+        self.theta = theta
+
+        self.v = 0.
+        self.w = 0.
+
+    def cmd_vel(self,v,w):
+        self.v = v
+        self.w = w
+
+    def step(self,dt):
+
+        self.theta += dt * self.w
+        self.x += dt * cos(self.theta) * self.v
+        self.y += dt * sin(self.theta) * self.v
+
+
+
+
+robot = Robot(1.5 * TILESIZE,1.47 * TILESIZE, 46 * pi/180)
 
 def line_intersection(line1, line2):
 
@@ -59,7 +82,7 @@ def get_ray_point(x, y, theta, d):
 def dist_to_robot(point):
     px,py = point
 
-    return (robot_x-px) * (robot_x-px) + (robot_y-py)*(robot_y-py)
+    return (robot.x-px) * (robot.x-px) + (robot.y-py)*(robot.y-py)
 
 
 def cell_intersection(maze_x,maze_y, x, y, theta, max_dist, debug_img = None):
@@ -144,9 +167,11 @@ def raycasting(x,y,theta, max_dist = 6 * TILESIZE, debug_img = None):
 
 
 def showmaze():
-    global robot_x, robot_y, robot_theta
 
     show_maze = True
+
+    last = time.time()
+
     while True:
         img = np.zeros((HEIGHT*TILESIZE,WIDTH*TILESIZE,3), np.uint8)
         img[:] = (255,255,255)
@@ -159,13 +184,13 @@ def showmaze():
                                         ((j+1)*TILESIZE, (i+1)*TILESIZE), 
                                         (128,0,255),-1)
 
-        X=int(robot_x)
-        Y=int(robot_y)
+        X=int(robot.x)
+        Y=int(robot.y)
 
-        cv2.circle(img, (X,Y), TILESIZE/4,(255,128,0),-1)
-        cv2.line(img, (X,Y), (int(X + cos(robot_theta) * TILESIZE/2), int(Y + sin(robot_theta) * TILESIZE/2)), (255,255,0), 3)
+        cv2.circle(img, (X,Y), int(TILESIZE/4),(255,128,0),-1)
+        cv2.line(img, (X,Y), (int(X + cos(robot.theta) * TILESIZE/2), int(Y + sin(robot.theta) * TILESIZE/2)), (255,255,0), 3)
 
-        hitpoints = raycasting(robot_x, robot_y, robot_theta) #, debug_img=img)
+        hitpoints = raycasting(robot.x, robot.y, robot.theta) #, debug_img=img)
         for hit in hitpoints:
             hx, hy = int(hit[0]), int(hit[1])
             cv2.line(img, (X,Y), (hx,hy) , (200,200,200), 1)
@@ -174,22 +199,26 @@ def showmaze():
 
 
         cv2.imshow('Maze',img)
-        key = cv2.waitKey()
-        print(key)
+        key = cv2.waitKey(15)
+
         if key == 27:
             break
         if key == 83: # left
-            robot_theta += 0.1
+            robot.w += 0.1
         if key == 81: # right
-            robot_theta -= 0.1
+            robot.w -= 0.1
         if key == 82: # up
-            robot_x += 10 * cos(robot_theta)
-            robot_y += 10 * sin(robot_theta)
+            robot.v += 1
         if key == 84: # down
-            robot_x += -10 * cos(robot_theta)
-            robot_y += -10 * sin(robot_theta)
+            robot.v -= 1
         if key == 9: # tab
             show_maze = not show_maze
+
+        now = time.time()
+        dt = now - last
+        robot.step(dt)
+
+        last = now
 
 
     cv2.destroyAllWindows()
