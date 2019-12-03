@@ -3,9 +3,10 @@ import cv2
 import numpy as np
 from math import cos, sin,pi,floor,sqrt
 
+import rospy
 #from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
-import rospy
+import tf
 
 HEIGHT= 7
 WIDTH = 6
@@ -25,6 +26,8 @@ class Robot:
     def __init__(self, name="WallE", x=0., y=0., theta=0.):
 
         self.name = name
+        self.base_frame = "%s_base_link" % self.name
+
         self.x = x
         self.y = y
         self.theta = theta
@@ -39,6 +42,7 @@ class Robot:
         self.range_min = 0. #m
         self.range_max = 50. #m
 
+        self.br = tf.TransformBroadcaster()
 
 #        self.odom_pub = rospy.Publisher('%s/odom' % self.name, Odometry, queue_size=1)
 #        self.odom_msg = Odometry()
@@ -50,7 +54,7 @@ class Robot:
 
         self.scan_pub = rospy.Publisher('%s/scan' % self.name, LaserScan, queue_size=1)
         self.scan_msg = LaserScan()
-        self.scan_msg.header.frame_id = "%s_odom" % self.name
+        self.scan_msg.header.frame_id = self.base_frame
         self.scan_msg.angle_min = self.angle_min
         self.scan_msg.angle_max = self.angle_max
         self.scan_msg.angle_increment = self.angle_increment
@@ -72,10 +76,17 @@ class Robot:
 #        self.odom_msg.header.stamp = rospy.Time.now() 
 #        self.odom_msg.pose.pose.position.x = self.x
 #        self.odom_msg.pose.pose.position.y = self.y
-#        self.odom_msg.pose.pose.orientation.z = sin(self.theta)
-#        self.odom_msg.pose.pose.orientation.w = cos(self.theta)
+#        self.odom_msg.pose.pose.orientation = tf.transformations.quaternion_from_euler(0, 0, self.theta)
+#        #self.odom_msg.pose.pose.orientation.z = sin(self.theta)
+#        #self.odom_msg.pose.pose.orientation.w = cos(self.theta)
 #
 #        self.odom_pub.publish(self.odom_msg)
+
+        self.br.sendTransform((self.x, self.y, 0),
+                tf.transformations.quaternion_from_euler(0, 0, self.theta),
+                rospy.Time.now(),
+                self.base_frame,
+                "odom")
 
         self.ranges, self.hitpoints = self.raycasting()
 
