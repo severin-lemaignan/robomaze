@@ -40,7 +40,7 @@ class Robot:
         # laser scan parameters
         self.angle_min = -45. * pi/180
         self.angle_max = 46. * pi/180
-        self.angle_increment = 5. * pi/180
+        self.angle_increment = 2. * pi/180
         self.range_min = 0. #m
         self.range_max = 50. #m
 
