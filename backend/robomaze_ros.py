@@ -10,29 +10,108 @@ from geometry_msgs.msg import Twist
 
 import tf
 
-HEIGHT= 7
-WIDTH = 6
-TILESIZE=10 #m
-M2PX=10 # TILESIZE[m] * M2PX = TILESIZE[px]
+class Maze:
+    height= 7
+    width = 6
+    TILESIZE=10 #m
+    M2PX=10 # TILESIZE[m] * M2PX = TILESIZE[px]
+
+    data = [0,0,0,0,0,0,
+            0,1,1,1,1,0,
+            0,1,1,0,1,0,
+            0,1,0,0,1,0,
+            0,1,1,1,1,0,
+            0,1,1,0,0,0,
+            0,0,0,0,0,0]
+
+    @staticmethod
+    def is_obstacle(x_m,y_m):
+        """x_m and y_m must be provided in meters
+        """
+
+        x = int(floor(round(x_m)/Maze.TILESIZE))
+        y = int(floor(round(y_m)/Maze.TILESIZE))
+
+        if x >= 0 and \
+           y >= 0 and \
+           x < Maze.width and \
+           y < Maze.height and \
+           Maze.data[x + (Maze.height - y - 1) * Maze.width]:
+            return False
+        return True
+
+    @staticmethod
+    def get_neighbour_cells(x,y):
+        """x, y are in meters
+        """
+        cx, cy = int(floor(x/Maze.TILESIZE)) * Maze.TILESIZE, int(floor(y/Maze.TILESIZE)) * Maze.TILESIZE
+
+        # note: no need to include the diagonals - they will be visited from the side cells anyway
+        return (cx-Maze.TILESIZE,cy), (cx,cy-Maze.TILESIZE), (cx,cy+Maze.TILESIZE), (cx+Maze.TILESIZE,cy)
+
+    @staticmethod
+    def show(robots):
+
+        img = np.zeros((Maze.height*Maze.TILESIZE*Maze.M2PX,Maze.width*Maze.TILESIZE*Maze.M2PX,3), np.uint8)
+        img[:] = (255,255,255)
 
 
-MAZE = [1,1,1,1,1,1,
-        1,0,0,0,0,1,
-        1,0,0,0,1,1,
-        1,0,0,0,0,1,
-        1,0,0,0,1,1,
-        1,1,1,0,0,1,
-        1,1,1,1,1,1]
+        for y in range(Maze.height):
+            for x in range(Maze.width):
+                if Maze.is_obstacle(x*Maze.TILESIZE, y*Maze.TILESIZE):
+                    cv2.rectangle(img,
+                      (x*Maze.TILESIZE*Maze.M2PX, 
+                       (Maze.height-y-1)*Maze.TILESIZE*Maze.M2PX),
+                      ((x+1)*Maze.TILESIZE*Maze.M2PX, 
+                       (Maze.height-y)*Maze.TILESIZE*Maze.M2PX),
+                       (128,0,255),-1)
 
-MAXLIFE=10
+        for robot in robots:
+            X=int(robot.x * Maze.M2PX)
+            Y=int((Maze.height * Maze.TILESIZE - robot.y) * Maze.M2PX)
+
+            cv2.circle(img, (X,Y), int(Maze.TILESIZE*Maze.M2PX/4),(255,128,0),-1)
+            cv2.line(img, (X,Y), (int(X + cos(robot.theta) *
+                Maze.TILESIZE*Maze.M2PX/2), int(Y - sin(robot.theta) *
+                    Maze.TILESIZE*Maze.M2PX/2)), (255,255,0), 3)
+
+            for hit in robot.hitpoints:
+                hx = int(hit[0] * Maze.M2PX)
+                hy  = int((Maze.height * Maze.TILESIZE - hit[1]) * Maze.M2PX)
+                cv2.line(img, (X,Y), (hx+X,hy+Y) , (200,200,200), 1)
+                cv2.circle(img, (hx+X,hy+Y), 5,(10,10,10),-1)
+
+
+        #cv2.imwrite("maze.png",img)
+        #return
+
+        cv2.imshow('Maze',img)
+        key = cv2.waitKey(1)
+
+        if key == 10:
+            import pdb;pdb.set_trace()
+        if key == 83: # left
+            robot.w -= 0.1
+        if key == 81: # right
+            robot.w += 0.1
+        if key == 82: # up
+            robot.v += 1
+        if key == 84: # down
+            robot.v -= 1
+        if key == 9: # tab
+            pass
+
+
 
 class Robot:
+    
+    MAXLIFE=10
     def __init__(self, name="WallE", x=0., y=0., theta=0.):
 
         self.name = name
         self.base_frame = "%s_base_link" % self.name
     
-        self.life = MAXLIFE
+        self.life = Robot.MAXLIFE
 
         self.lastinteraction = 0
         self.created = time.time()
@@ -95,6 +174,8 @@ class Robot:
         self.x += dt * cos(self.theta) * self.v
         self.y += dt * sin(self.theta) * self.v
 
+        print("(%s, %s, theta=%s)" % (self.x,self.y,self.theta))
+
         self.ranges, self.hitpoints = self.raycasting()
 
         if publish:
@@ -138,15 +219,6 @@ class Robot:
         y = det(d, ydiff) / div
         return x, y
 
-    @staticmethod
-    def is_obstacle(x_px,y_px):
-
-        x = int(floor(round(x_px)/TILESIZE))
-        y = int(floor(round(y_px)/TILESIZE))
-
-        if x >= 0 and y >= 0 and x < WIDTH and y < HEIGHT and not MAZE[x + y * WIDTH]:
-            return False
-        return True
 
     @staticmethod
     def ccw(A,B,C):
@@ -173,9 +245,9 @@ class Robot:
     def cell_intersection(self, maze_x, maze_y, alpha=0., debug_img=None):
 
         A = maze_x, maze_y
-        B = (maze_x + TILESIZE),maze_y
-        C = (maze_x + TILESIZE), (maze_y + TILESIZE)
-        D = maze_x, (maze_y + TILESIZE)
+        B = (maze_x + Maze.TILESIZE),maze_y
+        C = (maze_x + Maze.TILESIZE), (maze_y + Maze.TILESIZE)
+        D = maze_x, (maze_y + Maze.TILESIZE)
 
         next_cell = None
 
@@ -212,17 +284,17 @@ class Robot:
             return self.range_max*self.range_max + 1, None
 
         # the ray crosses the cell, but the cell is empty. Recursively looks for a wall
-        if not Robot.is_obstacle(maze_x, maze_y):
+        if not Maze.is_obstacle(maze_x, maze_y):
             intersection, direction = intersections[max_dist]
             next_maze_x, next_maze_y = maze_x, maze_y 
             if direction == "up":
-                next_maze_y -= TILESIZE
+                next_maze_y -= Maze.TILESIZE
             if direction == "down":
-                next_maze_y += TILESIZE
+                next_maze_y += Maze.TILESIZE
             if direction == "right":
-                next_maze_x += TILESIZE
+                next_maze_x += Maze.TILESIZE
             if direction == "left":
-                next_maze_x -= TILESIZE
+                next_maze_x -= Maze.TILESIZE
 
             return self.cell_intersection(next_maze_x, next_maze_y, alpha, debug_img)
 
@@ -231,12 +303,6 @@ class Robot:
         return min_dist, (x-self.x, y-self.y)
 
 
-    @staticmethod
-    def get_neighbour_cells(x,y):
-        cx, cy = int(floor(x/TILESIZE)) * TILESIZE, int(floor(y/TILESIZE)) * TILESIZE
-
-        # note: no need to include the diagonals - they will be visited from the side cells anyway
-        return (cx-TILESIZE,cy), (cx,cy-TILESIZE), (cx,cy+TILESIZE), (cx+TILESIZE,cy)
 
     def raycasting(self, debug_img = None):
         rays = np.arange(self.angle_min, self.angle_max, self.angle_increment)
@@ -245,7 +311,7 @@ class Robot:
         ranges = []
         hitpoints = []
         for alpha in rays:
-            for maze_x, maze_y in self.get_neighbour_cells(self.x, self.y):
+            for maze_x, maze_y in Maze.get_neighbour_cells(self.x, self.y):
                 hit = self.cell_intersection(maze_x, maze_y, alpha, debug_img)
                 if hit is not None:
                     dist, point = hit
@@ -259,61 +325,14 @@ class Robot:
         return ranges, hitpoints
 
 
-def showmaze(robots):
-
-    show_maze = True
-
-
-    img = np.zeros((HEIGHT*TILESIZE*M2PX,WIDTH*TILESIZE*M2PX,3), np.uint8)
-    img[:] = (255,255,255)
-
-    if show_maze:
-        for i in range(HEIGHT):
-            for j in range(WIDTH):
-                if MAZE[j + WIDTH * i]:
-                    cv2.rectangle(img, (j*TILESIZE*M2PX, i*TILESIZE*M2PX), 
-                                    ((j+1)*TILESIZE*M2PX, (i+1)*TILESIZE*M2PX), 
-                                    (128,0,255),-1)
-
-    for robot in robots:
-        X=int(robot.x * M2PX)
-        Y=int(robot.y * M2PX)
-
-        cv2.circle(img, (X,Y), int(TILESIZE*M2PX/4),(255,128,0),-1)
-        cv2.line(img, (X,Y), (int(X + cos(robot.theta) * TILESIZE*M2PX/2), int(Y + sin(robot.theta) * TILESIZE*M2PX/2)), (255,255,0), 3)
-
-        for hit in robot.hitpoints:
-            hx, hy = int(hit[0] * M2PX), int(hit[1] * M2PX)
-            cv2.line(img, (X,Y), (hx+X,hy+Y) , (200,200,200), 1)
-            cv2.circle(img, (hx+X,hy+Y), 5,(10,10,10),-1)
-
-
-
-    cv2.imshow('Maze',img)
-    key = cv2.waitKey(1)
-
-    if key == 10:
-        import pdb;pdb.set_trace()
-    if key == 83: # left
-        robot.w += 0.1
-    if key == 81: # right
-        robot.w -= 0.1
-    if key == 82: # up
-        robot.v += 1
-    if key == 84: # down
-        robot.v -= 1
-    if key == 9: # tab
-        show_maze = not show_maze
-
-
-
 if __name__ == "__main__":
 
     rospy.init_node("robomaze")
 
     robots = []
     for i in range(1):
-        robots.append(Robot("WallE%d" % i, (1.5 + i) * TILESIZE,1.47 * TILESIZE, 46 * pi/180))
+        robots.append(Robot("WallE%d" % i, (1.5 + i) * Maze.TILESIZE,1.47 *
+            Maze.TILESIZE, 0))
 
     last = time.time()
 
@@ -324,7 +343,7 @@ if __name__ == "__main__":
         for robot in robots:
             robot.step()
 
-        showmaze(robots)
+        Maze.show(robots)
 
         rate.sleep()
 
