@@ -79,14 +79,15 @@ class Robot:
         self.odom_msg.header.stamp = rospy.Time.now() 
         self.odom_msg.pose.pose.position.x = self.x
         self.odom_msg.pose.pose.position.y = self.y
-        #self.odom_msg.pose.pose.orientation = tf.transformations.quaternion_from_euler(0, 0, self.theta)
-        self.odom_msg.pose.pose.orientation.z = sin(self.theta)
-        self.odom_msg.pose.pose.orientation.w = cos(self.theta)
+
+        qx,qy,qz,qw = tf.transformations.quaternion_from_euler(0, 0, self.theta)
+        self.odom_msg.pose.pose.orientation.z = qz
+        self.odom_msg.pose.pose.orientation.w = qw
 
         self.odom_pub.publish(self.odom_msg)
 
         self.br.sendTransform((self.x, self.y, 0),
-                tf.transformations.quaternion_from_euler(0, 0, self.theta),
+                (qx,qy,qz,qw),
                 rospy.Time.now(),
                 self.base_frame,
                 "odom")
