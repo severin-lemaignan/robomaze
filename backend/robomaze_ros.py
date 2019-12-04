@@ -24,11 +24,19 @@ MAZE = [1,1,1,1,1,1,
         1,1,1,0,0,1,
         1,1,1,1,1,1]
 
+MAXLIFE=10
+
 class Robot:
     def __init__(self, name="WallE", x=0., y=0., theta=0.):
 
         self.name = name
         self.base_frame = "%s_base_link" % self.name
+    
+        self.life = MAXLIFE
+
+        self.lastinteraction = 0
+        self.created = time.time()
+        self.age = 0
 
         self.x = x
         self.y = y
@@ -68,11 +76,16 @@ class Robot:
 
         self.last = time.time()
 
+    def setpose(self, x, y, theta):
+        self.x=x
+        self.y=y
+        self.theta=theta
+
     def cmd_vel(self,msg):
         self.v = msg.linear.x
         self.w = msg.angular.z
 
-    def step(self):
+    def step(self, publish=False):
 
         now = time.time()
         dt = now - self.last
@@ -82,28 +95,30 @@ class Robot:
         self.x += dt * cos(self.theta) * self.v
         self.y += dt * sin(self.theta) * self.v
 
-        self.odom_msg.header.stamp = rospy.Time.now() 
-        self.odom_msg.pose.pose.position.x = self.x
-        self.odom_msg.pose.pose.position.y = self.y
-
-        qx,qy,qz,qw = tf.transformations.quaternion_from_euler(0, 0, self.theta)
-        self.odom_msg.pose.pose.orientation.z = qz
-        self.odom_msg.pose.pose.orientation.w = qw
-
-        self.odom_pub.publish(self.odom_msg)
-
-        self.br.sendTransform((self.x, self.y, 0),
-                (qx,qy,qz,qw),
-                rospy.Time.now(),
-                self.base_frame,
-                "odom")
-
         self.ranges, self.hitpoints = self.raycasting()
 
-        self.scan_msg.scan_time = dt
-        self.scan_msg.ranges = self.ranges
+        if publish:
+            self.odom_msg.header.stamp = rospy.Time.now() 
+            self.odom_msg.pose.pose.position.x = self.x
+            self.odom_msg.pose.pose.position.y = self.y
 
-        self.scan_pub.publish(self.scan_msg)
+            qx,qy,qz,qw = tf.transformations.quaternion_from_euler(0, 0, self.theta)
+            self.odom_msg.pose.pose.orientation.z = qz
+            self.odom_msg.pose.pose.orientation.w = qw
+
+            self.odom_pub.publish(self.odom_msg)
+
+            self.br.sendTransform((self.x, self.y, 0),
+                    (qx,qy,qz,qw),
+                    rospy.Time.now(),
+                    self.base_frame,
+                    "odom")
+
+
+            self.scan_msg.scan_time = dt
+            self.scan_msg.ranges = self.ranges
+
+            self.scan_pub.publish(self.scan_msg)
 
     @staticmethod
     def line_intersection(line1, line2):
@@ -275,7 +290,7 @@ def showmaze(robots):
 
 
     cv2.imshow('Maze',img)
-    key = cv2.waitKey(15)
+    key = cv2.waitKey(1)
 
     if key == 10:
         import pdb;pdb.set_trace()
@@ -297,7 +312,7 @@ if __name__ == "__main__":
     rospy.init_node("robomaze")
 
     robots = []
-    for i in range(10):
+    for i in range(1):
         robots.append(Robot("WallE%d" % i, (1.5 + i) * TILESIZE,1.47 * TILESIZE, 46 * pi/180))
 
     last = time.time()
