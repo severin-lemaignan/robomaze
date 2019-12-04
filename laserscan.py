@@ -238,7 +238,7 @@ class Robot:
         return ranges, hitpoints
 
 
-def showmaze():
+def showmaze(robots):
 
     show_maze = True
 
@@ -248,7 +248,8 @@ def showmaze():
 
         now = time.time()
         dt = now - last
-        robot.step(dt)
+        for robot in robots:
+            robot.step(dt)
 
         last = now
 
@@ -263,22 +264,25 @@ def showmaze():
                                         ((j+1)*TILESIZE*M2PX, (i+1)*TILESIZE*M2PX), 
                                         (128,0,255),-1)
 
-        X=int(robot.x * M2PX)
-        Y=int(robot.y * M2PX)
+        for robot in robots:
+            X=int(robot.x * M2PX)
+            Y=int(robot.y * M2PX)
 
-        cv2.circle(img, (X,Y), int(TILESIZE*M2PX/4),(255,128,0),-1)
-        cv2.line(img, (X,Y), (int(X + cos(robot.theta) * TILESIZE*M2PX/2), int(Y + sin(robot.theta) * TILESIZE*M2PX/2)), (255,255,0), 3)
+            cv2.circle(img, (X,Y), int(TILESIZE*M2PX/4),(255,128,0),-1)
+            cv2.line(img, (X,Y), (int(X + cos(robot.theta) * TILESIZE*M2PX/2), int(Y + sin(robot.theta) * TILESIZE*M2PX/2)), (255,255,0), 3)
 
-        for hit in robot.hitpoints:
-            hx, hy = int(hit[0] * M2PX), int(hit[1] * M2PX)
-            cv2.line(img, (X,Y), (hx+X,hy+Y) , (200,200,200), 1)
-            cv2.circle(img, (hx+X,hy+Y), 5,(10,10,10),-1)
+            for hit in robot.hitpoints:
+                hx, hy = int(hit[0] * M2PX), int(hit[1] * M2PX)
+                cv2.line(img, (X,Y), (hx+X,hy+Y) , (200,200,200), 1)
+                cv2.circle(img, (hx+X,hy+Y), 5,(10,10,10),-1)
 
 
 
         cv2.imshow('Maze',img)
         key = cv2.waitKey(15)
 
+        if key == 10:
+            import pdb;pdb.set_trace()
         if key == 27:
             break
         if key == 83: # left
@@ -299,8 +303,10 @@ if __name__ == "__main__":
 
     rospy.init_node("robomaze")
 
-    robot = Robot("WallE", 1.5 * TILESIZE,1.47 * TILESIZE, 46 * pi/180)
+    robots = []
+    for i in range(1):
+        robots.append(Robot("WallE%d" % i, (1.5 + i) * TILESIZE,1.47 * TILESIZE, 46 * pi/180))
 
-    showmaze()
+    showmaze(robots)
 
 
