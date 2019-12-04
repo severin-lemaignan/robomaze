@@ -15,7 +15,15 @@ import urlparse
 from jinja2 import Environment, PackageLoader
 import json
 
-maze = []
+import rospy
+
+from robomaze_ros import Robot, showmaze
+
+MAZE = []
+
+TILESIZE=10 #m
+M2PX=1 # TILESIZE[m] * M2PX = TILESIZE[px]
+
 width = 0
 height = 0
 
@@ -24,7 +32,7 @@ height = 0
 
 Robot orientation:
 
-0,0 +-------------------
+    +-------------------
     |  theta=90
     |  
     |  y
@@ -32,21 +40,22 @@ Robot orientation:
     |  |
     |  R--> x   theta=0
     |
+0,0 +-------------------
 
 - x,y relative to map origin (top left corner)
 - theta stored in radians
 - one unit (along x/y) is equal to one tile
 """
 
-STARTPOS=[1.,-1.,0.]
-MAXLIFE = 10
+STARTPOS=[1.5 * TILESIZE,-1.47 * TILESIZE,0.]
 MIN_TIME_BETWEEN_INTERACTIONS=0.2 #seconds
+MAXLIFE = 10
 
 robots = {}
 
 def store_map(mapdata):
 
-    global maze, width, height
+    global MAZE, width, height
 
     if is_map_loaded():
         logger.warning("Map already loaded. Ignoring it. Restart the backend if you want to update the map.")
@@ -58,17 +67,18 @@ def store_map(mapdata):
     width = rawmaze["width"]
     height = rawmaze["height"]
 
-    maze = [True if x in [399,431,463,492,493,494,495] else False for x in rawmaze["data"]] 
+    MAZE = [True if x in [399,431,463,492,493,494,495] else False for x in rawmaze["data"]] 
 
     for j in range(height):
         for i in range(width):
             idx = i + j * width
-            if maze[idx]:
+            if MAZE[idx]:
                 sys.stdout.write('.')
             else:
                 sys.stdout.write(' ')
         sys.stdout.write('\n')
 
+    showmaze({})
     logger.info("Maze successfully loaded!")
 
 def is_map_loaded():
@@ -83,19 +93,19 @@ def get_obstacles(x,y,theta):
     # obstacle at centre, north, south, east, west?
     obstacles = [True, True, True, True, True]
 
-    if x >= 0 and y >= 0 and x < width and y < height and maze[x + y * width]:
+    if x >= 0 and y >= 0 and x < width and y < height and MAZE[x + y * width]:
         obstacles[0] = False
 
-    if x >= 0 and y-1 >= 0 and x < width and y-1 < height and maze[x + (y-1) * width]:
+    if x >= 0 and y-1 >= 0 and x < width and y-1 < height and MAZE[x + (y-1) * width]:
         obstacles[1] = False
 
-    if x >= 0 and y+1 >= 0 and x < width and y+1 < height and maze[x + (y+1) * width]:
+    if x >= 0 and y+1 >= 0 and x < width and y+1 < height and MAZE[x + (y+1) * width]:
         obstacles[2] = False
 
-    if x+1 >= 0 and y >= 0 and x+1 < width and y < height and maze[x+1 + y * width]:
+    if x+1 >= 0 and y >= 0 and x+1 < width and y < height and MAZE[x+1 + y * width]:
         obstacles[3] = False
 
-    if x-1 >= 0 and y >= 0 and x-1 < width and y < height and maze[x-1 + y * width]:
+    if x-1 >= 0 and y >= 0 and x-1 < width and y < height and MAZE[x-1 + y * width]:
         obstacles[4] = False
 
     logger.info(str(obstacles))
@@ -109,7 +119,7 @@ def set_robot(name, x, y,theta):
         logger.info("Can not place robot there!")
         return json.dumps(False)
 
-    robots[name]["pos"] = [x,y,theta]
+    robots[name].setpose(x,y,theta)
     return json.dumps(True)
 
 def compute_robot_position(name):
@@ -142,94 +152,91 @@ def get_robots():
     complete_robots = dict(robots)
     
     for k in list(robots.keys()):
-        if robots[k]["life"] <= 0:
+        robot = robots[k]
+
+        if robot.life <= 0:
             logger.warning("Robot %s has no life left! killing it!" % k)
             del robots[k]
             del complete_robots[k]
             continue
 
-        if now - robots[k]["lastinteraction"] > 60 * 10:
+        if now - robot.lastinteraction > 60 * 10:
             logger.warning("Robot %s has not being used for 10 min. Removing it." % k)
             del robots[k]
             del complete_robots[k]
             continue
 
 
-        compute_robot_position(k)
+        
 
-        complete_robots[k]["age"] = now - robots[k]["created"]
+        complete_robots[k].age = now - robot.created
 
     return json.dumps(complete_robots)
 
 
 def create_new_robot(name):
     logger.info("Placing new robot %s at start position" % name)
-    robots[name] = {"pos": STARTPOS,
-                    "cmd_vel": [0,0],
-                    "created": time.time(),
-                    "lastinteraction": 0,
-                    "life": MAXLIFE
-                    }
+    robots[name] = Robot(name, *STARTPOS)
 
-def cmd_vel_robot(name,v,w):
-    if not is_map_loaded():
-        logger.error("Map not loaded yet! Reload webpage.")
-        return json.dumps([False,[]])
-
-    if name not in robots:
-        create_new_robot(name)
-
-    logger.info("Setting (v,w) for robot %s to (%s,%s)" % (name,v,w))
-
-    now = time.time()
-    if now - robots[name]["lastinteraction"] < MIN_TIME_BETWEEN_INTERACTIONS:
-        logger.error("Too many interactions with %s. Wait a bit." % name)
-        return json.dumps([False,[]])
-
-    robots[name]["lastinteraction"] = now
-    compute_robot_position(name)
-    robots[name]["cmd_vel"] = [v,w]
+#def cmd_vel_robot(name,v,w):
+#    if not is_map_loaded():
+#        logger.error("Map not loaded yet! Reload webpage.")
+#        return json.dumps([False,[]])
+#
+#    if name not in robots:
+#        create_new_robot(name)
+#
+#    logger.info("Setting (v,w) for robot %s to (%s,%s)" % (name,v,w))
+#
+#    now = time.time()
+#    if now - robots[name]["lastinteraction"] < MIN_TIME_BETWEEN_INTERACTIONS:
+#        logger.error("Too many interactions with %s. Wait a bit." % name)
+#        return json.dumps([False,[]])
+#
+#    robots[name]["lastinteraction"] = now
+#    compute_robot_position(name)
+#    robots[name]["cmd_vel"] = [v,w]
 
 
 
-def move(name, direction):
-    if not is_map_loaded():
-        logger.error("Map not loaded yet! Reload webpage.")
-        return json.dumps([False,[]])
-
-    if name not in robots:
-        create_new_robot(name)
-
-    logger.info("Moving robot %s to %s" % (name,direction))
-
-    now = time.time()
-    if now - robots[name]["lastinteraction"] < MIN_TIME_BETWEEN_INTERACTIONS:
-        logger.error("Too many interactions with %s. Wait a bit." % name)
-        return json.dumps([False,[]])
-
-    robots[name]["lastinteraction"] = now
-
-    x,y = robots[name]["pos"]
-
-    if direction == 'N':
-        nx, ny = x, y-1
-    if direction == 'S':
-        nx, ny = x, y+1
-    if direction == 'E':
-        nx, ny = x+1, y
-    if direction == 'W':
-        nx, ny = x-1, y
-
-    c,n,s,e,w = get_obstacles(nx,ny)
-
-    if c:
-        logger.info("...can not move there!")
-        robots[name]["life"] -= 1
-        return json.dumps([False,[]])
-
-    else:
-        robots[name]["pos"] = [nx,ny]
-        return json.dumps([True,[n,s,e,w]])
+#def move(name, direction):
+#    if not is_map_loaded():
+#        logger.error("Map not loaded yet! Reload webpage.")
+#        return json.dumps([False,[]])
+#
+#    if name not in robots:
+#        create_new_robot(name)
+#
+#    logger.info("Moving robot %s to %s" % (name,direction))
+#
+#    now = time.time()
+#    if now - robots[name]["lastinteraction"] < MIN_TIME_BETWEEN_INTERACTIONS:
+#        logger.error("Too many interactions with %s. Wait a bit." % name)
+#        return json.dumps([False,[]])
+#
+#    robots[name]["lastinteraction"] = now
+#
+#    x,y = robots[name]["pos"]
+#
+#    if direction == 'N':
+#        nx, ny = x, y-1
+#    if direction == 'S':
+#        nx, ny = x, y+1
+#    if direction == 'E':
+#        nx, ny = x+1, y
+#    if direction == 'W':
+#        nx, ny = x-1, y
+#
+#    c,n,s,e,w = get_obstacles(nx,ny)
+#
+#    if c:
+#        logger.info("...can not move there!")
+#        robots[name]["life"] -= 1
+#        return json.dumps([False,[]])
+#
+#    else:
+#        robots[name]["pos"] = [nx,ny]
+#        return json.dumps([True,[n,s,e,w]])
 
 def app(environ, start_response):
 
@@ -257,22 +264,24 @@ def app(environ, start_response):
 
         if "get_robots" in environ["QUERY_STRING"]:
             return get_robots()
-        if "set" in options:
-            name,x,y,theta = json.loads(options["set"][0])
-            return set_robot(name,x,y,theta)
-        if "cmd_vel" in options:
-            name,v,w = json.loads(options["cmd_vel"][0])
-            return cmd_vel_robot(name,v,w)
-        if "move" in options:
-            name,direction = json.loads(options["move"][0])
-            return move(name,direction)
+        #if "set" in options:
+        #    name,x,y,theta = json.loads(options["set"][0])
+        #    return set_robot(name,x,y,theta)
+        #if "cmd_vel" in options:
+        #    name,v,w = json.loads(options["cmd_vel"][0])
+        #    return cmd_vel_robot(name,v,w)
+        #if "move" in options:
+        #    name,direction = json.loads(options["move"][0])
+        #    return move(name,direction)
 
         if "life" in options:
             name = json.loads(options["life"][0])
-            return json.dumps(robots[name]["life"] if name in robots else 0)
+            return json.dumps(robots[name].life if name in robots else 0)
 
         return ""
 
+
+#rospy.init_node("robomaze")
 
 logger.info("ROBOMAZE backend. Starting the API...")
 WSGIServer(app, bindAddress = ("127.0.0.1", 8081)).run()
