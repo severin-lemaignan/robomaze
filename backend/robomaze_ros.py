@@ -66,11 +66,17 @@ class Robot:
 
         self.cmdvel_sub = rospy.Subscriber('%s/cmd_vel' % self.name, Twist, self.cmd_vel)
 
+        self.last = time.time()
+
     def cmd_vel(self,msg):
         self.v = msg.linear.x
         self.w = msg.angular.z
 
-    def step(self,dt):
+    def step(self):
+
+        now = time.time()
+        dt = now - self.last
+        self.last = now
 
         self.theta += dt * self.w
         self.x += dt * cos(self.theta) * self.v
@@ -242,61 +248,48 @@ def showmaze(robots):
 
     show_maze = True
 
-    last = time.time()
 
-    while True:
+    img = np.zeros((HEIGHT*TILESIZE*M2PX,WIDTH*TILESIZE*M2PX,3), np.uint8)
+    img[:] = (255,255,255)
 
-        now = time.time()
-        dt = now - last
-        for robot in robots:
-            robot.step(dt)
+    if show_maze:
+        for i in range(HEIGHT):
+            for j in range(WIDTH):
+                if MAZE[j + WIDTH * i]:
+                    cv2.rectangle(img, (j*TILESIZE*M2PX, i*TILESIZE*M2PX), 
+                                    ((j+1)*TILESIZE*M2PX, (i+1)*TILESIZE*M2PX), 
+                                    (128,0,255),-1)
 
-        last = now
+    for robot in robots:
+        X=int(robot.x * M2PX)
+        Y=int(robot.y * M2PX)
 
-        img = np.zeros((HEIGHT*TILESIZE*M2PX,WIDTH*TILESIZE*M2PX,3), np.uint8)
-        img[:] = (255,255,255)
+        cv2.circle(img, (X,Y), int(TILESIZE*M2PX/4),(255,128,0),-1)
+        cv2.line(img, (X,Y), (int(X + cos(robot.theta) * TILESIZE*M2PX/2), int(Y + sin(robot.theta) * TILESIZE*M2PX/2)), (255,255,0), 3)
 
-        if show_maze:
-            for i in range(HEIGHT):
-                for j in range(WIDTH):
-                    if MAZE[j + WIDTH * i]:
-                        cv2.rectangle(img, (j*TILESIZE*M2PX, i*TILESIZE*M2PX), 
-                                        ((j+1)*TILESIZE*M2PX, (i+1)*TILESIZE*M2PX), 
-                                        (128,0,255),-1)
-
-        for robot in robots:
-            X=int(robot.x * M2PX)
-            Y=int(robot.y * M2PX)
-
-            cv2.circle(img, (X,Y), int(TILESIZE*M2PX/4),(255,128,0),-1)
-            cv2.line(img, (X,Y), (int(X + cos(robot.theta) * TILESIZE*M2PX/2), int(Y + sin(robot.theta) * TILESIZE*M2PX/2)), (255,255,0), 3)
-
-            for hit in robot.hitpoints:
-                hx, hy = int(hit[0] * M2PX), int(hit[1] * M2PX)
-                cv2.line(img, (X,Y), (hx+X,hy+Y) , (200,200,200), 1)
-                cv2.circle(img, (hx+X,hy+Y), 5,(10,10,10),-1)
+        for hit in robot.hitpoints:
+            hx, hy = int(hit[0] * M2PX), int(hit[1] * M2PX)
+            cv2.line(img, (X,Y), (hx+X,hy+Y) , (200,200,200), 1)
+            cv2.circle(img, (hx+X,hy+Y), 5,(10,10,10),-1)
 
 
 
-        cv2.imshow('Maze',img)
-        key = cv2.waitKey(15)
+    cv2.imshow('Maze',img)
+    key = cv2.waitKey(15)
 
-        if key == 10:
-            import pdb;pdb.set_trace()
-        if key == 27:
-            break
-        if key == 83: # left
-            robot.w += 0.1
-        if key == 81: # right
-            robot.w -= 0.1
-        if key == 82: # up
-            robot.v += 1
-        if key == 84: # down
-            robot.v -= 1
-        if key == 9: # tab
-            show_maze = not show_maze
+    if key == 10:
+        import pdb;pdb.set_trace()
+    if key == 83: # left
+        robot.w += 0.1
+    if key == 81: # right
+        robot.w -= 0.1
+    if key == 82: # up
+        robot.v += 1
+    if key == 84: # down
+        robot.v -= 1
+    if key == 9: # tab
+        show_maze = not show_maze
 
-    cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
@@ -304,9 +297,21 @@ if __name__ == "__main__":
     rospy.init_node("robomaze")
 
     robots = []
-    for i in range(1):
+    for i in range(10):
         robots.append(Robot("WallE%d" % i, (1.5 + i) * TILESIZE,1.47 * TILESIZE, 46 * pi/180))
 
-    showmaze(robots)
+    last = time.time()
 
+    rate = rospy.Rate(10) # 10hz
+
+    while not rospy.is_shutdown():
+
+        for robot in robots:
+            robot.step()
+
+        showmaze(robots)
+
+        rate.sleep()
+
+    cv2.destroyAllWindows()
 
