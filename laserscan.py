@@ -188,7 +188,7 @@ class Robot:
 
         # our ray did not traversed the cell: out of range!
         if len(intersections) != 2:
-            return self.range_max + 1, None
+            return self.range_max*self.range_max + 1, None
 
         # the ray crosses the cell, but the cell is empty. Recursively looks for a wall
         if not Robot.is_obstacle(maze_x, maze_y):
@@ -212,13 +212,13 @@ class Robot:
 
     @staticmethod
     def get_neighbour_cells(x,y):
-        cx, cy = int(floor(round(x)*1./TILESIZE)) * TILESIZE, int(floor(round(y)*1./TILESIZE)) * TILESIZE
+        cx, cy = int(floor(x/TILESIZE)) * TILESIZE, int(floor(y/TILESIZE)) * TILESIZE
 
         # note: no need to include the diagonals - they will be visited from the side cells anyway
         return (cx-TILESIZE,cy), (cx,cy-TILESIZE), (cx,cy+TILESIZE), (cx+TILESIZE,cy)
 
     def raycasting(self, debug_img = None):
-        rays = np.arange(robot.angle_min, robot.angle_max, robot.angle_increment)
+        rays = np.arange(self.angle_min, self.angle_max, self.angle_increment)
         #rays=[-0.3]
 
         ranges = []
