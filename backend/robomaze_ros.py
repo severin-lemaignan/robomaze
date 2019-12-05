@@ -2,6 +2,7 @@
 
 import yaml
 import time
+import random
 import cv2
 import numpy as np
 from math import cos, sin,pi,floor,sqrt
@@ -14,11 +15,60 @@ from geometry_msgs.msg import Twist
 
 import tf
 
+RES_ROOT="../res/"
+FLOOR=1
+TOP=2
+BOTTOM=3
+LEFT=4
+RIGHT=5
+TOP_LEFT_CVX=6
+TOP_LEFT_CCV=7
+TOP_RIGHT_CVX=8
+TOP_RIGHT_CCV=9
+BOTTOM_LEFT_CVX=10
+BOTTOM_LEFT_CCV=11
+BOTTOM_RIGHT_CVX=12
+BOTTOM_RIGHT_CCV=13
+
+BOTTOM_TOP_RIGHT=14
+BOTTOM_TOP_LEFT=15
+BOTTOM_LEFT_RIGHT=16
+TOP_LEFT_RIGHT=17
+BOTTOM_TOP=18
+LEFT_RIGHT=19
+
+ROBOT=cv2.imread(RES_ROOT + "walle_top.png",cv2.IMREAD_UNCHANGED)
+ROBOT_ALPHA = ROBOT[:,:,3]
+ROBOT_RGB = ROBOT[:,:,:3]
+
+TILES = {
+        FLOOR: [cv2.imread(RES_ROOT + "floor2.jpg"),cv2.imread(RES_ROOT + "floor.jpg"),cv2.imread(RES_ROOT + "floor.jpg"),cv2.imread(RES_ROOT + "floor.jpg")],
+        TOP: cv2.imread(RES_ROOT + "top.jpg"),
+        BOTTOM: cv2.imread(RES_ROOT + "bottom.jpg"),
+        LEFT: cv2.imread(RES_ROOT + "left.jpg"),
+        RIGHT: cv2.imread(RES_ROOT + "right.jpg"),
+        TOP_LEFT_CVX: cv2.imread(RES_ROOT + "top_left_cvx.jpg"),
+        TOP_LEFT_CCV: cv2.imread(RES_ROOT + "top_left_ccv.jpg"),
+        TOP_RIGHT_CVX: cv2.imread(RES_ROOT + "top_right_cvx.jpg"),
+        TOP_RIGHT_CCV: cv2.imread(RES_ROOT + "top_right_ccv.jpg"),
+        BOTTOM_LEFT_CVX: cv2.imread(RES_ROOT + "bottom_left_cvx.jpg"),
+        BOTTOM_LEFT_CCV: cv2.imread(RES_ROOT + "bottom_left_ccv.jpg"),
+        BOTTOM_RIGHT_CVX: cv2.imread(RES_ROOT + "bottom_right_cvx.jpg"),
+        BOTTOM_RIGHT_CCV: cv2.imread(RES_ROOT + "bottom_right_ccv.jpg"),
+
+        BOTTOM_TOP_RIGHT:cv2.imread(RES_ROOT + "bottom_top_right.jpg"),
+        BOTTOM_TOP_LEFT:cv2.imread(RES_ROOT + "bottom_top_left.jpg"),
+        BOTTOM_LEFT_RIGHT:cv2.imread(RES_ROOT + "bottom_left_right.jpg"),
+        TOP_LEFT_RIGHT:cv2.imread(RES_ROOT + "top_left_right.jpg"),
+        BOTTOM_TOP:cv2.imread(RES_ROOT + "bottom_top.jpg"),
+        LEFT_RIGHT:cv2.imread(RES_ROOT + "left_right.jpg"),
+        }
+        
 class Maze:
     height= 20
     width = 20
     TILESIZE=5 #m
-    M2PX=5 # TILESIZE[m] * M2PX = TILESIZE[px]
+    M2PX=7 # TILESIZE[m] * M2PX = TILESIZE[px]
 
     data = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
             0,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,0,0,
@@ -49,6 +99,13 @@ class Maze:
         x = int(floor(round(x_m)/Maze.TILESIZE))
         y = int(floor(round(y_m)/Maze.TILESIZE))
 
+        return Maze.is_obstacle_raw(x,y)
+
+    @staticmethod
+    def is_obstacle_raw(x,y):
+        """x_m and y_m must be provided in meters
+        """
+
         if x >= 0 and \
            y >= 0 and \
            x < Maze.width and \
@@ -57,6 +114,12 @@ class Maze:
             return False
         return True
 
+    @staticmethod
+    def get_surrounding_obstacles_raw(x,y):
+        obs = []
+        for x,y in [(x,y+1),(x,y-1),(x-1,y),(x+1,y),(x-1,y+1),(x+1,y+1),(x-1,y-1),(x+1,y-1)]:
+            obs.append(Maze.is_obstacle_raw(x,y))
+        return obs
     @staticmethod
     def get_neighbour_cells(x,y):
         """x, y are in meters
@@ -67,7 +130,89 @@ class Maze:
         return (cx-Maze.TILESIZE,cy), (cx,cy-Maze.TILESIZE), (cx,cy+Maze.TILESIZE), (cx+Maze.TILESIZE,cy)
 
     @staticmethod
-    def show(robots):
+    def get_edge_tile(x,y):
+
+        # Each of the parameter is True if the corresponding neighbouring
+        # cells contains an obstacle.
+        #import pdb;pdb.set_trace()
+        up,down,left,right,upleft,upright,downleft,downright = Maze.get_surrounding_obstacles_raw(x,y)
+
+        if up and down and left and right:
+            return None
+        if up and down and left and not right:
+            return TILES[RIGHT]
+        if up and down and not left and right:
+            return TILES[LEFT]
+        if up and not down and left and right:
+            return TILES[BOTTOM]
+        if not up and down and left and right:
+            return TILES[TOP]
+        if up and not down and not left and right:
+            return TILES[BOTTOM_LEFT_CVX]
+        if up and not down and left and not right:
+            return TILES[BOTTOM_RIGHT_CVX]
+        if not up and down and not left and right:
+            return TILES[TOP_LEFT_CVX]
+        if not up and down and left and not right:
+            return TILES[TOP_RIGHT_CVX]
+
+        if not up and not down and left and not right:
+            return TILES[BOTTOM_TOP_RIGHT]
+        if not up and not down and not left and right:
+            return TILES[BOTTOM_TOP_LEFT]
+        if not up and not down and left and right:
+            return TILES[BOTTOM_TOP]
+        if up and down and not left and not right:
+            return TILES[LEFT_RIGHT]
+        if not up and down and not left and not right:
+            return TILES[TOP_LEFT_RIGHT]
+        if up and not down and not left and not right:
+            return TILES[BOTTOM_LEFT_RIGHT]
+
+
+
+        return None
+
+    @staticmethod
+    def overlay_transparent(background, overlay, x, y):
+
+        background_width = background.shape[1]
+        background_height = background.shape[0]
+
+        if x >= background_width or y >= background_height:
+            return background
+
+        h, w = overlay.shape[0], overlay.shape[1]
+
+        if x + w > background_width:
+            w = background_width - x
+            overlay = overlay[:, :w]
+
+        if y + h > background_height:
+            h = background_height - y
+            overlay = overlay[:h]
+
+        if overlay.shape[2] < 4:
+            overlay = np.concatenate(
+                [
+                    overlay,
+                    np.ones((overlay.shape[0], overlay.shape[1], 1), dtype = overlay.dtype) * 255
+                ],
+                axis = 2,
+            )
+
+        overlay_image = overlay[..., :3]
+        mask = overlay[..., 3:] / 255.0
+
+        background[y:y+h, x:x+w] = (1.0 - mask) * background[y:y+h, x:x+w] + mask * overlay_image
+
+        return background
+
+    @staticmethod
+    def render(robots):
+        
+        # make sure we always generate the same random pattern
+        random.seed(1)
 
         img = np.zeros((Maze.height*Maze.TILESIZE*Maze.M2PX,Maze.width*Maze.TILESIZE*Maze.M2PX,3), np.uint8)
         img[:] = (140,178,250)
@@ -75,15 +220,23 @@ class Maze:
 
         for y in range(Maze.height):
             for x in range(Maze.width):
-                if Maze.is_obstacle(x*Maze.TILESIZE, y*Maze.TILESIZE):
-                    cv2.rectangle(img,
-                      (x*Maze.TILESIZE*Maze.M2PX, 
-                       (Maze.height-y-1)*Maze.TILESIZE*Maze.M2PX),
-                      ((x+1)*Maze.TILESIZE*Maze.M2PX, 
-                       (Maze.height-y)*Maze.TILESIZE*Maze.M2PX),
-                       (5,25,55),-1)
+                px = x * Maze.TILESIZE * Maze.M2PX
+                px2 = (x+1) * Maze.TILESIZE * Maze.M2PX
+                py = (Maze.height - y - 1) * Maze.TILESIZE * Maze.M2PX
+                py2 = (Maze.height - y) * Maze.TILESIZE * Maze.M2PX
 
-        for name, robot in list(robots.iteritems()):
+                if Maze.is_obstacle(x*Maze.TILESIZE, y*Maze.TILESIZE):
+
+                    #import pdb;pdb.set_trace()
+                    tile = Maze.get_edge_tile(x,y)
+                    if tile is not None:
+                        img[py:py2,px:px2] = tile
+                    else:
+                        cv2.rectangle(img, (px, py), (px2,py2), (0,0,0),-1)
+                else:
+                    img[py:py2,px:px2] = random.choice(TILES[FLOOR])
+
+        for name, robot in list(robots.items()):
             X=int(robot.x * Maze.M2PX)
             Y=int((Maze.height * Maze.TILESIZE - robot.y) * Maze.M2PX)
 
@@ -94,11 +247,22 @@ class Maze:
                 cv2.circle(img, (hx+X,-hy+Y), 2,(220,220,220),-1)
 
 
-            cv2.circle(img, (X,Y), int(Robot.RADIUS*Maze.M2PX),(255,128,0),-1)
-            cv2.line(img, (X,Y), (int(X + cos(robot.theta) *
-                Maze.TILESIZE*Maze.M2PX/2), int(Y - sin(robot.theta) *
-                    Maze.TILESIZE*Maze.M2PX/2)), (255,255,0), 3)
+            rotmat = cv2.getRotationMatrix2D((ROBOT.shape[0]/2, ROBOT.shape[1]/2), robot.theta * 180/pi, 1)
+            ##import pdb;pdb.set_trace()
+            #rotated_robot = cv2.wrapAffine(ROBOT, rotmat,ROBOT.size())
+            rotated_robot = ROBOT
+            w,h,_ = rotated_robot.shape
 
+            Maze.overlay_transparent(img, rotated_robot,X-w/2,Y-h/2)
+
+            cv2.putText(img, name, (X, Y+int(Robot.RADIUS * Maze.M2PX) + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (180, 200, 180), 2) #font stroke
+
+        return img
+
+    @staticmethod
+    def show(robots):
+
+        img = Maze.render(robots)
         cv2.imshow('Maze',img)
         key = cv2.waitKey(1)
 
@@ -318,8 +482,8 @@ class Robot:
         if not intersections:
             return None
 
-        max_dist = max(intersections.iterkeys())
-        min_dist = min(intersections.iterkeys())
+        max_dist = max(intersections.keys())
+        min_dist = min(intersections.keys())
 
         # our ray did not traversed the cell: out of range!
         if len(intersections) != 2:
@@ -367,6 +531,14 @@ class Robot:
         return ranges, hitpoints
 
 
+for k,v in TILES.items():
+    if type(TILES[k]) == list:
+        TILES[k] = [cv2.resize(t,(Maze.TILESIZE*Maze.M2PX, Maze.TILESIZE*Maze.M2PX)) for t in TILES[k]]
+    else:
+        TILES[k] = cv2.resize(TILES[k],(Maze.TILESIZE*Maze.M2PX, Maze.TILESIZE*Maze.M2PX))
+
+ROBOT = cv2.resize(ROBOT,(int(2*Robot.RADIUS*Maze.M2PX), int(2*Robot.RADIUS*Maze.M2PX)))
+
 if __name__ == "__main__":
 
     rospy.init_node("robomaze")
@@ -405,10 +577,13 @@ if __name__ == "__main__":
 
     rate = rospy.Rate(10) # 10hz
 
+    #cv2.namedWindow("Maze", cv2.WINDOW_NORMAL)
+    cv2.namedWindow("Maze", cv2.WINDOW_AUTOSIZE)
+
     while not rospy.is_shutdown():
 
 
-        for name,robot in list(robots.iteritems()):
+        for name,robot in list(robots.items()):
             robot.step(publish_odom=True, publish_tf=True, publish_laser=True)
 
         Maze.show(robots)
