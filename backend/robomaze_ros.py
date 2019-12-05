@@ -76,7 +76,7 @@ class Maze:
             X=int(robot.x * Maze.M2PX)
             Y=int((Maze.height * Maze.TILESIZE - robot.y) * Maze.M2PX)
 
-            cv2.circle(img, (X,Y), int(Maze.TILESIZE*Maze.M2PX/4),(255,128,0),-1)
+            cv2.circle(img, (X,Y), int(Robot.RADIUS*Maze.M2PX),(255,128,0),-1)
             cv2.line(img, (X,Y), (int(X + cos(robot.theta) *
                 Maze.TILESIZE*Maze.M2PX/2), int(Y - sin(robot.theta) *
                     Maze.TILESIZE*Maze.M2PX/2)), (255,255,0), 3)
@@ -111,6 +111,8 @@ class Maze:
 
 class Robot:
     
+    RADIUS=0.25 * Maze.TILESIZE
+
     MAXLIFE=10
     def __init__(self, name="WallE", x=0., y=0., theta=0.):
 
@@ -180,8 +182,11 @@ class Robot:
         nx = self.x + dt * cos(ntheta) * self.v
         ny = self.y + dt * sin(ntheta) * self.v
 
+        head_x, head_y = nx + cos(ntheta) * Robot.RADIUS, ny + sin(ntheta) * Robot.RADIUS
+
+
         # if we do not hit an obstacle, move and re-compute laserscan
-        if not Maze.is_obstacle(nx,ny):
+        if not Maze.is_obstacle(head_x,head_y):
             self.theta = ntheta 
             self.x = nx
             self.y = ny
