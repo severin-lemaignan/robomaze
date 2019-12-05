@@ -1,26 +1,11 @@
 #! /usr/bin/env python
 
-import sys
-import select
-import tty
-import termios
-
-import json
-import requests
-
-#URL = "https://robomaze.skadge.org/api?"
-URL = "http://localhost/api?"
+import sys, select, tty, termios
 
 def isData():
     return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
 
 old_settings = termios.tcgetattr(sys.stdin)
-
-if len(sys.argv) != 2:
-    print("Usage: keyboard.py <name of robot>")
-    sys.exit()
-
-name = sys.argv[1]
 
 try:
     tty.setcbreak(sys.stdin.fileno())
@@ -42,13 +27,10 @@ try:
                     w += 0.1
                 elif arrow == 68: # left 
                     w -= 0.1
-                
-                requests.get(URL + "cmd_vel=" + json.dumps([name, v,w]))
+                print("v=%.1f, w=%.1f" % (v,w))
 
             else:
                 print(key)
-
-
 
 finally:
     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
