@@ -197,6 +197,9 @@ class Robot:
             self.odom_msg.pose.pose.orientation.z = qz
             self.odom_msg.pose.pose.orientation.w = qw
 
+            self.odom_msg.twist.twist.linear.x = self.v
+            self.odom_msg.twist.twist.angular.z = self.w
+
             self.odom_pub.publish(self.odom_msg)
 
             self.br.sendTransform((self.x, self.y, 0),
