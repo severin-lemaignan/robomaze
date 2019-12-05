@@ -176,9 +176,9 @@ class Robot:
         dt = now - self.last
         self.last = now
 
-        ntheta += dt * self.w
-        nx += dt * cos(self.ntheta) * self.v
-        ny += dt * sin(self.ntheta) * self.v
+        ntheta = self.theta + dt * self.w
+        nx = self.x + dt * cos(ntheta) * self.v
+        ny = self.y + dt * sin(ntheta) * self.v
 
         # if we do not hit an obstacle, move and re-compute laserscan
         if not Maze.is_obstacle(nx,ny):
