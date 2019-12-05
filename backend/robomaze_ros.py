@@ -85,7 +85,7 @@ class Maze:
                 hx = int(hit[0] * Maze.M2PX)
                 hy  = int(hit[1] * Maze.M2PX)
                 cv2.line(img, (X,Y), (hx+X,-hy+Y) , (200,200,200), 1)
-                cv2.circle(img, (hx+X,-hy+Y), 5,(10,10,10),-1)
+                cv2.circle(img, (hx+X,-hy+Y), 2,(10,10,10),-1)
 
 
         #cv2.imwrite("maze.png",img)
