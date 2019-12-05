@@ -173,13 +173,17 @@ class Robot:
         dt = now - self.last
         self.last = now
 
-        self.theta += dt * self.w
-        self.x += dt * cos(self.theta) * self.v
-        self.y += dt * sin(self.theta) * self.v
+        ntheta += dt * self.w
+        nx += dt * cos(self.ntheta) * self.v
+        ny += dt * sin(self.ntheta) * self.v
 
-        print("(%s, %s, theta=%s)" % (self.x,self.y,self.theta))
+        # if we do not hit an obstacle, move and re-compute laserscan
+        if not Maze.is_obstacle(nx,ny):
+            self.theta = ntheta 
+            self.x = nx
+            self.y = ny
 
-        self.ranges, self.hitpoints = self.raycasting()
+            self.ranges, self.hitpoints = self.raycasting()
 
         if publish:
             self.odom_msg.header.stamp = rospy.Time.now() 
