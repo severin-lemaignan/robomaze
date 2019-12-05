@@ -172,7 +172,7 @@ class Robot:
         self.v = msg.linear.x
         self.w = msg.angular.z
 
-    def step(self, publish=False):
+    def step(self, publish_odom=False, publish_tf=False, publish_laser=False):
 
         now = time.time()
         dt = now - self.last
@@ -193,12 +193,13 @@ class Robot:
 
             self.ranges, self.hitpoints = self.raycasting()
 
-        if publish:
+        qx,qy,qz,qw = tf.transformations.quaternion_from_euler(0, 0, self.theta)
+
+        if publish_odom:
             self.odom_msg.header.stamp = rospy.Time.now() 
             self.odom_msg.pose.pose.position.x = self.x
             self.odom_msg.pose.pose.position.y = self.y
 
-            qx,qy,qz,qw = tf.transformations.quaternion_from_euler(0, 0, self.theta)
             self.odom_msg.pose.pose.orientation.z = qz
             self.odom_msg.pose.pose.orientation.w = qw
 
@@ -207,13 +208,15 @@ class Robot:
 
             self.odom_pub.publish(self.odom_msg)
 
+        if publish_tf:
+
             self.br.sendTransform((self.x, self.y, 0),
-                    (qx,qy,qz,qw),
-                    rospy.Time.now(),
-                    self.base_frame,
-                    "odom")
+                                  (qx,qy,qz,qw),
+                                  rospy.Time.now(),
+                                  self.base_frame,
+                                  "odom")
 
-
+        if publish_laser:
             self.scan_msg.scan_time = dt
             self.scan_msg.ranges = self.ranges
 
@@ -360,6 +363,7 @@ if __name__ == "__main__":
         robots[name] = Robot(name, 1.5 * Maze.TILESIZE,1.47 * Maze.TILESIZE, 0)
 
     new_robot_sub = rospy.Subscriber("create_robot", String, on_new_robot)
+    #new_robot_service = rospy.Service('create_robot', String, on_new_robot)
 
     last = time.time()
 
@@ -368,7 +372,7 @@ if __name__ == "__main__":
     while not rospy.is_shutdown():
 
         for name,robot in robots.iteritems():
-            robot.step(publish=True)
+            robot.step(publish_odom=True, publish_tf=False, publish_laser=True)
 
         Maze.show(robots)
 
