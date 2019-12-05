@@ -248,9 +248,8 @@ class Maze:
 
 
             rotmat = cv2.getRotationMatrix2D((ROBOT.shape[0]/2, ROBOT.shape[1]/2), robot.theta * 180/pi, 1)
-            ##import pdb;pdb.set_trace()
-            #rotated_robot = cv2.wrapAffine(ROBOT, rotmat,ROBOT.size())
-            rotated_robot = ROBOT
+            rotated_robot = cv2.warpAffine(ROBOT, rotmat,ROBOT.shape[:2])
+            #rotated_robot = ROBOT
             w,h,_ = rotated_robot.shape
 
             Maze.overlay_transparent(img, rotated_robot,X-w/2,Y-h/2)
