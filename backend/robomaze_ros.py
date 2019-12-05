@@ -1,9 +1,12 @@
+#! /usr/bin/env python
+
 import time
 import cv2
 import numpy as np
 from math import cos, sin,pi,floor,sqrt
 
 import rospy
+from std_msgs.msg import String
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
@@ -69,7 +72,7 @@ class Maze:
                        (Maze.height-y)*Maze.TILESIZE*Maze.M2PX),
                        (128,0,255),-1)
 
-        for robot in robots:
+        for name, robot in robots.iteritems():
             X=int(robot.x * Maze.M2PX)
             Y=int((Maze.height * Maze.TILESIZE - robot.y) * Maze.M2PX)
 
@@ -336,10 +339,19 @@ if __name__ == "__main__":
 
     rospy.init_node("robomaze")
 
-    robots = []
-    for i in range(1):
-        robots.append(Robot("WallE%d" % i, (1.5 + i) * Maze.TILESIZE,1.47 *
-            Maze.TILESIZE, 0))
+    robots = {}
+
+    def on_new_robot(msg):
+
+        name = msg.data
+
+        if name in robots:
+            rospy.logerror("Robot <%s> already exists!" % name)
+            return
+        
+        robots[name] = Robot(name, 1.5 * Maze.TILESIZE,1.47 * Maze.TILESIZE, 0)
+
+    new_robot_sub = rospy.Subscriber("create_robot", String, on_new_robot)
 
     last = time.time()
 
@@ -347,8 +359,8 @@ if __name__ == "__main__":
 
     while not rospy.is_shutdown():
 
-        for robot in robots:
-            robot.step()
+        for name,robot in robots.iteritems():
+            robot.step(publish=True)
 
         Maze.show(robots)
 
