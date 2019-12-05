@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+import yaml
 import time
 import cv2
 import numpy as np
@@ -69,7 +70,7 @@ class Maze:
     def show(robots):
 
         img = np.zeros((Maze.height*Maze.TILESIZE*Maze.M2PX,Maze.width*Maze.TILESIZE*Maze.M2PX,3), np.uint8)
-        img[:] = (50,108,150)
+        img[:] = (140,178,250)
 
 
         for y in range(Maze.height):
@@ -98,9 +99,6 @@ class Maze:
                 Maze.TILESIZE*Maze.M2PX/2), int(Y - sin(robot.theta) *
                     Maze.TILESIZE*Maze.M2PX/2)), (255,255,0), 3)
 
-        #cv2.imwrite("maze.png",img)
-        #return
-
         cv2.imshow('Maze',img)
         key = cv2.waitKey(1)
 
@@ -116,6 +114,16 @@ class Maze:
             robot.v -= 1
         if key == 9: # tab
             pass
+        if key == 115: # s
+            cv2.imwrite("map.png",img)
+            with open("map.yaml",'w') as f:
+                yaml.dump({'image':'map.png',
+                           'resolution':1./Maze.M2PX,
+                           'origin': [0.0, 0.0, 0.0],
+                           'occupied_thresh': 0.65,
+                           'free_thresh': 0.196,
+                           'negate': 0},f,default_flow_style=False)
+            print("ROS map generated (map.yaml + map.png)")
 
 
 
