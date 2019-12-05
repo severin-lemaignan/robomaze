@@ -69,7 +69,7 @@ class Maze:
     def show(robots):
 
         img = np.zeros((Maze.height*Maze.TILESIZE*Maze.M2PX,Maze.width*Maze.TILESIZE*Maze.M2PX,3), np.uint8)
-        img[:] = (255,255,255)
+        img[:] = (50,108,150)
 
 
         for y in range(Maze.height):
@@ -80,23 +80,23 @@ class Maze:
                        (Maze.height-y-1)*Maze.TILESIZE*Maze.M2PX),
                       ((x+1)*Maze.TILESIZE*Maze.M2PX, 
                        (Maze.height-y)*Maze.TILESIZE*Maze.M2PX),
-                       (128,0,255),-1)
+                       (5,25,55),-1)
 
-        for name, robot in robots.iteritems():
+        for name, robot in list(robots.iteritems()):
             X=int(robot.x * Maze.M2PX)
             Y=int((Maze.height * Maze.TILESIZE - robot.y) * Maze.M2PX)
+
+            for hit in robot.hitpoints:
+                hx = int(hit[0] * Maze.M2PX)
+                hy  = int(hit[1] * Maze.M2PX)
+                cv2.line(img, (X,Y), (hx+X,-hy+Y) , (180,180,180), 1)
+                cv2.circle(img, (hx+X,-hy+Y), 2,(220,220,220),-1)
+
 
             cv2.circle(img, (X,Y), int(Robot.RADIUS*Maze.M2PX),(255,128,0),-1)
             cv2.line(img, (X,Y), (int(X + cos(robot.theta) *
                 Maze.TILESIZE*Maze.M2PX/2), int(Y - sin(robot.theta) *
                     Maze.TILESIZE*Maze.M2PX/2)), (255,255,0), 3)
-
-            for hit in robot.hitpoints:
-                hx = int(hit[0] * Maze.M2PX)
-                hy  = int(hit[1] * Maze.M2PX)
-                cv2.line(img, (X,Y), (hx+X,-hy+Y) , (200,200,200), 1)
-                cv2.circle(img, (hx+X,-hy+Y), 2,(10,10,10),-1)
-
 
         #cv2.imwrite("maze.png",img)
         #return
@@ -149,11 +149,14 @@ class Robot:
         self.range_min = 0. #m
         self.range_max = 60. #m
 
+        self.ranges = []
+        self.hitpoints = []
+
         self.br = tf.TransformBroadcaster()
 
         self.odom_pub = rospy.Publisher('%s/odom' % self.name, Odometry, queue_size=1)
         self.odom_msg = Odometry()
-        self.odom_msg.header.frame_id = "odom"
+        self.odom_msg.header.frame_id = "%s_odom" % self.name
         self.odom_msg.child_frame_id = self.base_frame
         self.odom_msg.pose.pose.position.z = 0.
         self.odom_msg.pose.pose.orientation.x = 0.
@@ -224,7 +227,7 @@ class Robot:
                                   (qx,qy,qz,qw),
                                   rospy.Time.now(),
                                   self.base_frame,
-                                  "odom")
+                                  "%s_odom" % self.name)
 
         if publish_laser:
             self.scan_msg.scan_time = dt
@@ -362,7 +365,20 @@ if __name__ == "__main__":
 
     robots = {}
 
+    spawn_idx = 0
+    SPAWN_POINTS = [(1.5, 1.47, 2),
+                    (16.8, 17.5, -102),
+                    (12.8, 15.8, -90),
+                    (7.4, 11.5, -2),
+                    (10.4, 10.5, 102),
+                    (7.6, 6.2, -38),
+                    (14.1, 9.2, 193),
+                    (1.6, 5.2, 34),
+                    (2.1, 10.4, -22),
+                    (2.4, 18.4, 22),
+                    ]
     def on_new_robot(msg):
+        global spawn_idx
 
         name = msg.data
 
@@ -370,7 +386,9 @@ if __name__ == "__main__":
             rospy.logerror("Robot <%s> already exists!" % name)
             return
         
-        robots[name] = Robot(name, 1.5 * Maze.TILESIZE,1.47 * Maze.TILESIZE, 0)
+        x,y,t = SPAWN_POINTS[spawn_idx]
+        spawn_idx = (spawn_idx + 1) % len(SPAWN_POINTS)
+        robots[name] = Robot(name, x * Maze.TILESIZE,y * Maze.TILESIZE, t * pi/180.)
 
     new_robot_sub = rospy.Subscriber("create_robot", String, on_new_robot)
     #new_robot_service = rospy.Service('create_robot', String, on_new_robot)
@@ -381,8 +399,9 @@ if __name__ == "__main__":
 
     while not rospy.is_shutdown():
 
-        for name,robot in robots.iteritems():
-            robot.step(publish_odom=True, publish_tf=False, publish_laser=True)
+
+        for name,robot in list(robots.iteritems()):
+            robot.step(publish_odom=True, publish_tf=True, publish_laser=True)
 
         Maze.show(robots)
 
