@@ -15,7 +15,7 @@ from geometry_msgs.msg import Twist
 
 import tf
 
-RES_ROOT="../res/"
+RES_ROOT="res/"
 FLOOR=1
 TOP=2
 BOTTOM=3
@@ -562,7 +562,7 @@ if __name__ == "__main__":
         name = msg.data
 
         if name in robots:
-            rospy.logerror("Robot <%s> already exists!" % name)
+            rospy.logerr("Robot <%s> already exists!" % name)
             return
         
         x,y,t = SPAWN_POINTS[spawn_idx]
