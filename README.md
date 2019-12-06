@@ -1,6 +1,8 @@
 Robomaze: an interactive maze to learn ROS and help Wall-E
 ==========================================================
 
+Spawn robots in the maze, control each of them, and access their odometry, laser scans and tf frames!
+
 ![Screenshot](doc/screenshot.jpg)
 
 Pre-requisites
@@ -25,6 +27,9 @@ Mapping
 rosrun hector_mapping hector_mapping scan:=/WallE/scan _base_frame:=WallE_base_link _odom_frame:=WallE_odom _map_resolution:=0.5
 ```
 
+Related projects
+----------------
 
+Not entierly unlike [stage](http://wiki.ros.org/stage) (but well, I'm not pretending to build a real robot simulator!)
 
 
