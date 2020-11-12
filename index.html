@@ -42,9 +42,8 @@
                         <p><a href="map.html">Go to the live map</a></p>
                 </b></center>
 
-                <p>You can control your robot by sending <code>GET</code> HTTP
-                requests to the RoboMaze REST API endpoint:
-                <code>https://robomaze.skadge.org/api</code>. See below for the
+                <p>You can control your robot using the RoboMaze REST API endpoint at
+                <code>https://robomaze.skadge.org/</code>. See below for the
                 available requests.</p>
 
                 <blockquote>
@@ -68,14 +67,14 @@
 
                 <b>Examples:</b>
                 <pre><code class="bash"># from a terminal
-curl 'https://robomaze.skadge.org/api?move=\["Wall-E","E"\]'</code></pre>
+curl 'https://robomaze.skadge.org/move/Wall-E/E'</code></pre>
 
                 <pre><code class="python"># in python
 import json
 import requests
 
-REST_ENDPOINT = "https://robomaze.skadge.org/api"
-requests.get(REST_ENDPOINT + "?move=" + json.dumps(["Wall-E", "N"]))</code></pre>
+REST_ENDPOINT = "https://robomaze.skadge.org/"
+requests.get(REST_ENDPOINT + "move/Wall-E/N")</code></pre>
 
                 <h2>Remaining life of a robot</h2>
 
@@ -86,14 +85,14 @@ requests.get(REST_ENDPOINT + "?move=" + json.dumps(["Wall-E", "N"]))</code></pre
 
                 <b>Examples:</b>
                 <pre><code class="bash"># from a terminal
-curl 'https://robomaze.skadge.org/api?life="Wall-E"'</code></pre>
+curl 'https://robomaze.skadge.org/life/Wall-E'</code></pre>
 
                 <pre><code class="python"># in python
 import json
 import requests
 
-REST_ENDPOINT = "https://robomaze.skadge.org/api"
-requests.get(REST_ENDPOINT + "?life=" + json.dumps("Wall-E"))</code></pre>
+REST_ENDPOINT = "https://robomaze.skadge.org/"
+requests.get(REST_ENDPOINT + "life/Wall-E")</code></pre>
 
             </section>
             <footer>

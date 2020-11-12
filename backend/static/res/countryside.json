@@ -58,7 +58,7 @@
  "tilesets":[
         {
          "firstgid":1,
-         "image":"res/terrain.png",
+         "image":"static/res/terrain.png",
          "imageheight":1024,
          "imagewidth":1024,
          "margin":0,

@@ -8,14 +8,26 @@ A game to learn programing.
 Pre-requisites
 --------------
 
-- you need a webserver. A configuration file for `nginx` is provided in `etc/`
-- `apt install python-flup python-jinja2`
+- `sudo apt install python-flask python-jinja2`
 
 Usage
 -----
 
+- start the Flask backend:
+
+```sh
+export FLASK_APP=backend/backend.py
+export FLASK_DEBUG=1 # for debugging
+flask run --host=0.0.0.0 --port=8080
+```
+- open a webbrowser and go to `http://localhost:8080`
+
+Deployment on a production server
+---------------------------------
+
+- you need a webserver. A configuration file for `nginx` is provided in `etc/`
+
 - start the webserver
-- start the CGI: `./backend/backend.py`
-- open a webbrowser and go to `http://localhost`
+- open a webbrowser and go the website
 
 

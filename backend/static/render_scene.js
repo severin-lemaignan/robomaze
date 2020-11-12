@@ -33,10 +33,10 @@ $(function() {
     var mapReady = new Event('mapready');
 
     var robotImg = new Image();
-    robotImg.src = "res/wall-e.png";
+    robotImg.src = "/static/res/wall-e.png";
 
     var cloudImg = new Image();
-    cloudImg.src = "res/cloud.png";
+    cloudImg.src = "/static/res/cloud.png";
     var cloudsCanvas = document.createElement('canvas');
     cloudsCanvas.width = 3200;
     cloudsCanvas.height = 3200;
@@ -154,7 +154,7 @@ $(function() {
             else {
                 var robotBox = $("<span class='robotbox' id='" + name + "_box'  ></span>");
                 robotBox.css("background-color", getRandomColor(name));
-                var img = $("<img src='res/wall-e.png' />");
+                var img = $("<img src='/static/res/wall-e.png' />");
                 robotBox.append(img);
                 robotBox.append($("<br/><b>" + name + "</b>"));
                 robotBox.append("<br/>❤️<span id='" + name + "_life'>" + robots[name].life + "</span>");
@@ -188,7 +188,7 @@ $(function() {
                 tilesize = scene.data.tilewidth
                 if (layer.name == "Route") {// this is the route layer for our robots!! Send that to the backend
                     console.log("Sending the route map to the backend");
-                    $.post('/api?map', 
+                    $.post('/map', 
                         JSON.stringify(
                             {"width": layer.width,
                                 "height": layer.height,
@@ -230,7 +230,7 @@ $(function() {
         },
         load: function(name) {
             // note: appending timestamp to force a fresh reload everytime (bypass cache)
-            return $.getJSON("res/" + name + ".json?t=" + (new Date()).getTime()).done($.proxy(this.loadTileset, this));
+            return $.getJSON("/static/res/" + name + ".json?t=" + (new Date()).getTime()).done($.proxy(this.loadTileset, this));
         }
     };
 
@@ -246,7 +246,7 @@ $(function() {
 
     document.addEventListener('mapready', function(e) {
         setInterval(function() {
-            $.get('/api?get_robots', function(data) {
+            $.get('/get_robots', function(data) {
 
                 newrobots = JSON.parse(data);
                 robotsList();

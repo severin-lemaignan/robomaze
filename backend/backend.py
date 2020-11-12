@@ -3,17 +3,21 @@
 
 import logging; logger = logging.getLogger("main")
 FORMAT = '%(asctime)s - %(levelname)s: %(message)s'
-logging.basicConfig(format=FORMAT, level=logging.DEBUG)
+logging.basicConfig(format=FORMAT, level=logging.WARNING)
 
 import time
 from itertools import imap
 
-from cgi import escape
+from flask import Flask, escape, url_for,render_template, g, request, redirect, jsonify, session
+from werkzeug import secure_filename
+
+
 import sys, os
-from flup.server.fcgi import WSGIServer
 import urlparse
 from jinja2 import Environment, PackageLoader
 import json
+
+app = Flask(__name__, static_folder='static')
 
 maze = []
 width = 0
@@ -25,7 +29,7 @@ MIN_TIME_BETWEEN_INTERACTIONS=0.2 #seconds
 
 robots = {}
 
-def store_map(mapdata):
+def store_map(rawmaze):
 
     global maze, width, height
 
@@ -33,8 +37,6 @@ def store_map(mapdata):
         logger.warning("Map already loaded. Ignoring it. Restart the backend if you want to update the map.")
         return
 
-
-    rawmaze = json.loads(mapdata)
 
     width = rawmaze["width"]
     height = rawmaze["height"]
@@ -78,9 +80,12 @@ def get_obstacles(x,y):
     logger.info(str(obstacles))
     return obstacles
 
+@app.route("/set/<name>/<x>/<y>")
 def set_robot(name, x, y):
     logger.info("Placing robot %s to %s,%s" % (name,x,y))
 
+    x = int(x)
+    y=int(y)
     c,_,_,_,_ = get_obstacles(x,y)
     if c:
         logger.info("Can not place robot there!")
@@ -94,6 +99,11 @@ def get_robot(name):
         return json.dumps([-1,-1])
     return json.dumps(robots[name]["pos"])
 
+@app.route("/")
+def main():
+    return render_template('map.html')
+
+@app.route("/get_robots")
 def get_robots():
 
     now = time.time()
@@ -128,6 +138,7 @@ def create_new_robot(name):
                     "life": MAXLIFE
                     }
 
+@app.route('/move/<name>/<direction>')
 def move(name, direction):
     if not is_map_loaded():
         logger.error("Map not loaded yet! Reload webpage.")
@@ -167,46 +178,16 @@ def move(name, direction):
         robots[name]["pos"] = [nx,ny]
         return json.dumps([True,[n,s,e,w]])
 
-def app(environ, start_response):
+@app.route("/map", methods=['POST'])
+def map():
+    logger.info("Retrieving the map data...")
 
-    logger.info("Incoming request!")
-    start_response('200 OK', [('Content-Type', 'text/html')])
+    
+    store_map(json.loads(request.form.keys()[0]))
+    return ""
 
-    path = environ["PATH_INFO"].decode("utf-8")
-
-
-    if "map" in environ["QUERY_STRING"]:
-        logger.info("Retrieving the map data...")
-
-        # load the POST content
-        try:
-            request_body_size = int(environ.get('CONTENT_LENGTH', 0))
-        except (ValueError):
-            logger.warning("No map data!")
-            request_body_size = 0
-
-        request_body = environ['wsgi.input'].read(request_body_size)
-        store_map(request_body)
-        return ""
-    else:
-        options = urlparse.parse_qs(environ["QUERY_STRING"])
-
-        if "get_robots" in environ["QUERY_STRING"]:
-            return get_robots()
-        if "set" in options:
-            name,x,y = json.loads(options["set"][0])
-            return set_robot(name,x,y)
-        if "move" in options:
-            name,direction = json.loads(options["move"][0])
-            return move(name,direction)
-
-        if "life" in options:
-            name = json.loads(options["life"][0])
-            return json.dumps(robots[name]["life"] if name in robots else 0)
-
-        return ""
+@app.route("/life/<name>")
+def life(name):
+    return json.dumps(robots[name]["life"] if name in robots else 0)
 
 
-logger.info("ROBOMAZE backend. Starting to API...")
-WSGIServer(app, bindAddress = ("127.0.0.1", 8081)).run()
-logger.info("Bye bye.")
