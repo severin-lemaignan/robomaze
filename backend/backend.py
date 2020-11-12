@@ -99,6 +99,10 @@ def get_robot(name):
 
 @app.route("/")
 def main():
+    return render_template('index.html')
+
+@app.route("/live")
+def map():
     return render_template('map.html')
 
 @app.route("/get_robots")
@@ -177,7 +181,7 @@ def move(name, direction):
         return json.dumps([True,[n,s,e,w]])
 
 @app.route("/map", methods=['POST'])
-def map():
+def load_map():
     logger.info("Retrieving the map data...")
 
     
