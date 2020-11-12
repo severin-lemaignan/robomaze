@@ -10,8 +10,8 @@ Pre-requisites
 
 - `sudo apt install python-flask python-jinja2`
 
-Usage
------
+Usage on local machine
+----------------------
 
 - start the Flask backend:
 
@@ -25,9 +25,11 @@ flask run --host=0.0.0.0 --port=8080
 Deployment on a production server
 ---------------------------------
 
-- you need a webserver. A configuration file for `nginx` is provided in `etc/`
-
-- start the webserver
-- open a webbrowser and go the website
+- `sudo apt install nginx uwsgi uwsgi-plugin-python3`
+- Install the configuration file for `nginx` provided in `etc/` in your
+  `site-enabled` and restart the webserver (adjust the server name + www root as
+  needed!)
+- `uwsgi --ini robomaze.ini`
+- open a webbrowser and go the website!
 
 
