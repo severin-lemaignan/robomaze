@@ -6,14 +6,12 @@ FORMAT = '%(asctime)s - %(levelname)s: %(message)s'
 logging.basicConfig(format=FORMAT, level=logging.WARNING)
 
 import time
-from itertools import imap
 
 from flask import Flask, escape, url_for,render_template, g, request, redirect, jsonify, session
 from werkzeug import secure_filename
 
 
 import sys, os
-import urlparse
 from jinja2 import Environment, PackageLoader
 import json
 
@@ -183,7 +181,7 @@ def map():
     logger.info("Retrieving the map data...")
 
     
-    store_map(json.loads(request.form.keys()[0]))
+    store_map(json.loads([k for k in request.form.keys()][0]))
     return ""
 
 @app.route("/life/<name>")
