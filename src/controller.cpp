@@ -40,6 +40,10 @@ int main(int argc, char* argv[])
 
             if (response.status_code() == 200) {
                 auto json_response = response.extract_json(true).get();
+                if (!json_response[0].as_bool()) {
+                    cout << "I've just hit a wall! There's a bug in my code!" << endl;
+                    return 1;
+                }
                 next_move = astar.getNextMove({
                         json_response[1][0].as_bool(),
                         json_response[1][1].as_bool(),
