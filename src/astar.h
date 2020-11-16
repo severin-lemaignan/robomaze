@@ -33,9 +33,6 @@ private:
 
     Position planNextPosition();
     unsigned int heuristic(Position node, Position goal);
-    Position pop_best_node(NodesList& nodes);
-    bool is_free(Position node);
-    std::vector<Position> neighbours(Position node);
 };
 
 #endif // ASTAR_H
