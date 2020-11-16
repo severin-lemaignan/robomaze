@@ -7,7 +7,7 @@ import time
 import json
 import requests
 
-REST_ENDPOINT = "https://robomaze.skadge.org/api?"
+REST_ENDPOINT = "https://robomaze.skadge.org/"
 
 if len(sys.argv) != 2:
     print("Usage: random_walk.py <name of robot>")
@@ -24,10 +24,10 @@ try:
 
     while 1:
 
-        result = requests.get(REST_ENDPOINT + "move=" + json.dumps([name, random.choice(next_directions)]))
+        result = requests.get(REST_ENDPOINT + "/move/" + name + "/" + random.choice(next_directions))
         print(json.loads(result.text))
 
-        life = requests.get(REST_ENDPOINT + "life=" + json.dumps(name))
+        life = requests.get(REST_ENDPOINT + "/life/" + name)
         if json.loads(life.text) == 0:
             print("Dead :-(")
             break

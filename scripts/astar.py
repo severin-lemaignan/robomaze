@@ -7,7 +7,7 @@ import time
 import json
 import requests
 
-URL = "https://robomaze.skadge.org/api?"
+URL = "https://robomaze.skadge.org/"
 
 
 MAZE_SIZE = (100, 100)
@@ -113,7 +113,7 @@ def get_next_move(obstacles):
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print("Usage: random.py <name of robot>")
+        print("Usage: astar.py <name of robot>")
         sys.exit()
 
     name = sys.argv[1]
@@ -121,7 +121,7 @@ if __name__ == '__main__':
     next_move = "E"
 
     while 1:
-        response = requests.get(URL + "move=" + json.dumps([name, next_move]))
+        response = requests.get(URL + f"move/{name}/{next_move}")
 
         obstacles = json.loads(response.text)[1]
 
