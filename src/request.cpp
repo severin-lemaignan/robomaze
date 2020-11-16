@@ -20,8 +20,7 @@ int main(int argc, char* argv[])
     http_client client(U("https://robomaze.skadge.org/"));
 
     // Build request URI and start the request.
-    uri_builder builder(U("/api"));
-    builder.append_query(U("move"), U("[\"" + string(argv[1]) +"\",\"" + string(argv[2]) + "\"]"));
+    uri_builder builder(U("move/" + string(argv[1]) +"/" + string(argv[2])));
     cout << "Sending query: " << builder.to_string() << endl;
     http_response response = client.request(methods::GET, builder.to_string()).get();
 
