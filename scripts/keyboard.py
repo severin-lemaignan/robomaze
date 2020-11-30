@@ -1,17 +1,22 @@
 #! /usr/bin/env python
 
+# this script loops indefinitely, reading one character at a time 
+# from the console.
+
 import sys, select, tty, termios,time
+
+import rospy
+from geometry_msgs.msg import Twist
+
+# ...ROS initialisation?
+
+
+###
 
 def isData():
     return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
 
 old_settings = termios.tcgetattr(sys.stdin)
-
-
-import rospy
-from geometry_msgs.msg import Twist
-
-
 
 try:
     tty.setcbreak(sys.stdin.fileno())
@@ -36,7 +41,10 @@ try:
                 else: # attention: due to the read(2), need to press esc 3 times to get there!
                     print("Exiting")
                     break
+                    
                 print("v=%.1f, w=%.1f" % (v,w))
+                
+                # Here, publish your data
 
             else:
                 if c == "q":
