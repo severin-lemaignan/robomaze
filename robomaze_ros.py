@@ -41,6 +41,9 @@ ROBOT=cv2.imread(RES_ROOT + "walle_top.png",cv2.IMREAD_UNCHANGED)
 ROBOT_ALPHA = ROBOT[:,:,3]
 ROBOT_RGB = ROBOT[:,:,:3]
 
+FREE_SPACE="free_space"
+RFID_TAG="rfid_tag"
+
 TILES = {
         FLOOR: [cv2.imread(RES_ROOT + "floor2.jpg"),cv2.imread(RES_ROOT + "floor.jpg"),cv2.imread(RES_ROOT + "floor.jpg"),cv2.imread(RES_ROOT + "floor.jpg")],
         TOP: cv2.imread(RES_ROOT + "top.jpg"),
@@ -65,30 +68,30 @@ TILES = {
         }
         
 class Maze:
-    height= 20
-    width = 20
-    TILESIZE=5 #m
-    M2PX=7 # TILESIZE[m] * M2PX = TILESIZE[px]
+    height= 20 # in tiles
+    width = 20 # in tiles
+    TILESIZE=2 #m
+    M2PX=16 # TILESIZE[m] * M2PX = TILESIZE[px]
 
     data = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-            0,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,0,0,
-            0,1,1,0,1,0,0,0,0,0,1,0,0,1,0,0,1,1,0,0,
-            0,1,0,0,1,0,1,1,1,0,0,0,1,1,0,0,1,1,0,0,
-            0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,
-            0,1,0,0,0,0,0,0,1,0,0,0,1,1,0,0,1,0,0,0,
-            0,1,1,0,1,0,1,0,0,0,1,0,0,1,1,0,1,0,1,0,
-            0,1,0,0,1,0,1,1,1,0,1,1,0,1,0,0,0,0,1,0,
-            0,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,0,
-            0,1,1,1,1,0,0,1,1,1,1,0,0,0,0,0,1,0,1,0,
-            0,1,1,0,1,0,0,0,0,0,1,0,1,1,1,0,0,0,1,0,
-            0,1,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,0,1,0,
-            0,1,0,0,1,0,1,1,0,0,0,0,0,1,1,0,1,0,1,0,
-            0,1,1,1,1,0,1,1,1,1,1,1,0,1,1,0,1,0,1,0,
-            0,1,1,1,1,1,1,1,1,1,1,0,0,1,1,0,1,1,1,0,
-            0,1,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,
-            0,1,1,0,1,0,1,1,0,0,1,0,0,1,1,0,1,0,1,0,
-            0,1,1,1,1,0,0,1,1,1,1,1,0,1,0,0,1,0,1,0,
-            0,1,1,1,1,1,1,1,0,1,1,0,0,1,1,1,1,1,1,0,
+            0,1,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,1,1,0,
+            0,1,0,1,1,1,1,0,6,1,1,1,0,1,1,1,1,1,1,0,
+            0,1,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,1,1,0,
+            0,1,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,
+            0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,
+            0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,1,0,0,
+            0,1,1,1,1,0,1,1,1,1,1,0,4,1,1,1,0,1,0,0,
+            0,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1,0,0,
+            0,1,1,1,1,0,1,1,3,1,1,0,1,1,1,5,0,1,0,0,
+            0,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1,0,0,
+            0,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1,0,0,
+            0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,
+            0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,
+            0,1,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1,0,0,
+            0,1,1,1,1,1,0,1,1,1,1,0,1,1,7,1,0,1,0,0,
+            0,1,1,1,1,2,0,1,1,1,1,0,1,1,1,1,0,1,0,0,
+            0,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,
+            0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,
             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
     @staticmethod
@@ -113,6 +116,34 @@ class Maze:
            Maze.data[x + (Maze.height - y - 1) * Maze.width]:
             return False
         return True
+
+    @staticmethod
+    def get_item(x_m,y_m):
+        """x_m and y_m must be provided in meters
+        """
+
+        x = int(floor(round(x_m)/Maze.TILESIZE))
+        y = int(floor(round(y_m)/Maze.TILESIZE))
+
+        return Maze.get_item_raw(x,y)
+
+    @staticmethod
+    def get_item_raw(x,y):
+        """x_m and y_m must be provided in meters
+        """
+
+        if x >= 0 and \
+           y >= 0 and \
+           x < Maze.width and \
+           y < Maze.height:
+                id = Maze.data[x + (Maze.height - y - 1) * Maze.width]
+
+                if id == 1:
+                    return FREE_SPACE, None
+                else:
+                    return RFID_TAG, "rfid_%s" % id
+
+        return None, None
 
     @staticmethod
     def get_surrounding_obstacles_raw(x,y):
@@ -217,10 +248,13 @@ class Maze:
         img = np.zeros((Maze.height*Maze.TILESIZE*Maze.M2PX,Maze.width*Maze.TILESIZE*Maze.M2PX,3), np.uint8)
         img[:] = (140,178,250)
 
+        rfid_overlay = np.zeros((Maze.height*Maze.TILESIZE*Maze.M2PX,Maze.width*Maze.TILESIZE*Maze.M2PX,4), np.uint8)
+        rfid_overlay[:] = (0,0,0,0)
 
         for y in range(Maze.height):
             for x in range(Maze.width):
                 px = x * Maze.TILESIZE * Maze.M2PX
+                w = Maze.TILESIZE * Maze.M2PX
                 px2 = (x+1) * Maze.TILESIZE * Maze.M2PX
                 py = (Maze.height - y - 1) * Maze.TILESIZE * Maze.M2PX
                 py2 = (Maze.height - y) * Maze.TILESIZE * Maze.M2PX
@@ -234,7 +268,19 @@ class Maze:
                     else:
                         cv2.rectangle(img, (px, py), (px2,py2), (0,0,0),-1)
                 else:
-                    img[py:py2,px:px2] = random.choice(TILES[FLOOR])
+
+                    item_type, name = Maze.get_item(x*Maze.TILESIZE, y*Maze.TILESIZE)
+
+                    if item_type == FREE_SPACE:
+                        img[py:py2,px:px2] = random.choice(TILES[FLOOR])
+                    else:
+                        img[py:py2,px:px2] = random.choice(TILES[FLOOR])
+
+                        #cv2.circle(img[py:py2,px:px2], (int(Maze.TILESIZE * Maze.M2PX/2),int(Maze.TILESIZE * Maze.M2PX/2)),5,(100,100,200),-1)
+                        cv2.circle(rfid_overlay, (int(px + w/2), int(py + w/2)), 5 * Maze.M2PX,(200,100,50,70),-1)
+                        cv2.putText(rfid_overlay, name, (int(px + w/2) - 20, int(py + w/2) + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (180, 100, 80,200), 1) #font stroke
+
+                        cv2.circle(img, (int(px + w/2), int(py + w/2)), 5,(100,100,220),-1)
 
         for name, robot in list(robots.items()):
             X=int(robot.x * Maze.M2PX)
@@ -252,9 +298,11 @@ class Maze:
             #rotated_robot = ROBOT
             w,h,_ = rotated_robot.shape
 
-            Maze.overlay_transparent(img, rotated_robot,X-w/2,Y-h/2)
+            Maze.overlay_transparent(img, rotated_robot,X-int(w/2),Y-int(h/2))
 
             cv2.putText(img, name, (X, Y+int(Robot.RADIUS * Maze.M2PX) + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (180, 200, 180), 2) #font stroke
+
+        Maze.overlay_transparent(img, rfid_overlay,0,0)
 
         return img
 
