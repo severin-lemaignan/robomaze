@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 import yaml
 import time
@@ -6,14 +6,6 @@ import random
 import cv2
 import numpy as np
 from math import cos, sin,pi,floor,sqrt
-
-import rospy
-from std_msgs.msg import String
-from nav_msgs.msg import Odometry
-from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import Twist
-
-import tf
 
 RES_ROOT="res/"
 FLOOR=1
@@ -311,31 +303,6 @@ class Maze:
 
         img = Maze.render(robots)
         cv2.imshow('Maze',img)
-        key = cv2.waitKey(1)
-
-        if key == 10:
-            import pdb;pdb.set_trace()
-        if key == 83: # left
-            robot.w -= 0.1
-        if key == 81: # right
-            robot.w += 0.1
-        if key == 82: # up
-            robot.v += 1
-        if key == 84: # down
-            robot.v -= 1
-        if key == 9: # tab
-            pass
-        if key == 115: # s
-            cv2.imwrite("map.png",img)
-            with open("map.yaml",'w') as f:
-                yaml.dump({'image':'map.png',
-                           'resolution':1./Maze.M2PX,
-                           'origin': [0.0, 0.0, 0.0],
-                           'occupied_thresh': 0.65,
-                           'free_thresh': 0.196,
-                           'negate': 0},f,default_flow_style=False)
-            print("ROS map generated (map.yaml + map.png)")
-
 
 
 class Robot:
@@ -371,28 +338,6 @@ class Robot:
         self.ranges = []
         self.hitpoints = []
 
-        self.br = tf.TransformBroadcaster()
-
-        self.odom_pub = rospy.Publisher('%s/odom' % self.name, Odometry, queue_size=1)
-        self.odom_msg = Odometry()
-        self.odom_msg.header.frame_id = "%s_odom" % self.name
-        self.odom_msg.child_frame_id = self.base_frame
-        self.odom_msg.pose.pose.position.z = 0.
-        self.odom_msg.pose.pose.orientation.x = 0.
-        self.odom_msg.pose.pose.orientation.y = 0.
-
-        self.scan_pub = rospy.Publisher('%s/scan' % self.name, LaserScan, queue_size=1)
-        self.scan_msg = LaserScan()
-        self.scan_msg.header.frame_id = self.base_frame
-        self.scan_msg.angle_min = self.angle_min
-        self.scan_msg.angle_max = self.angle_max
-        self.scan_msg.angle_increment = self.angle_increment
-        self.scan_msg.time_increment = 0.
-        self.scan_msg.range_min = self.range_min
-        self.scan_msg.range_max = self.range_max
-
-        self.cmdvel_sub = rospy.Subscriber('%s/cmd_vel' % self.name, Twist, self.cmd_vel)
-
         self.last = time.time()
 
     def setpose(self, x, y, theta):
@@ -404,7 +349,7 @@ class Robot:
         self.v = msg.linear.x
         self.w = msg.angular.z
 
-    def step(self, publish_odom=False, publish_tf=False, publish_laser=False):
+    def step(self):
 
         now = time.time()
         dt = now - self.last
@@ -424,35 +369,6 @@ class Robot:
             self.y = ny
 
             self.ranges, self.hitpoints = self.raycasting()
-
-        qx,qy,qz,qw = tf.transformations.quaternion_from_euler(0, 0, self.theta)
-
-        if publish_odom:
-            self.odom_msg.header.stamp = rospy.Time.now() 
-            self.odom_msg.pose.pose.position.x = self.x
-            self.odom_msg.pose.pose.position.y = self.y
-
-            self.odom_msg.pose.pose.orientation.z = qz
-            self.odom_msg.pose.pose.orientation.w = qw
-
-            self.odom_msg.twist.twist.linear.x = self.v
-            self.odom_msg.twist.twist.angular.z = self.w
-
-            self.odom_pub.publish(self.odom_msg)
-
-        if publish_tf:
-
-            self.br.sendTransform((self.x, self.y, 0),
-                                  (qx,qy,qz,qw),
-                                  rospy.Time.now(),
-                                  self.base_frame,
-                                  "%s_odom" % self.name)
-
-        if publish_laser:
-            self.scan_msg.scan_time = dt
-            self.scan_msg.ranges = self.ranges
-
-            self.scan_pub.publish(self.scan_msg)
 
     @staticmethod
     def line_intersection(line1, line2):
@@ -588,8 +504,6 @@ ROBOT = cv2.resize(ROBOT,(int(2*Robot.RADIUS*Maze.M2PX), int(2*Robot.RADIUS*Maze
 
 if __name__ == "__main__":
 
-    rospy.init_node("robomaze")
-
     robots = {}
 
     spawn_idx = 0
@@ -604,38 +518,64 @@ if __name__ == "__main__":
                     (2.1, 10.4, -22),
                     (2.4, 18.4, 22),
                     ]
-    def on_new_robot(msg):
+    def on_new_robot(name):
         global spawn_idx
 
-        name = msg.data
 
         if name in robots:
-            rospy.logerr("Robot <%s> already exists!" % name)
+            print("Robot <%s> already exists!" % name)
             return
         
         x,y,t = SPAWN_POINTS[spawn_idx]
         spawn_idx = (spawn_idx + 1) % len(SPAWN_POINTS)
         robots[name] = Robot(name, x * Maze.TILESIZE,y * Maze.TILESIZE, t * pi/180.)
 
-    new_robot_sub = rospy.Subscriber("create_robot", String, on_new_robot)
-    #new_robot_service = rospy.Service('create_robot', String, on_new_robot)
+    DEFAULT_ROBOT = "robot"
+    on_new_robot(DEFAULT_ROBOT)
 
     last = time.time()
-
-    rate = rospy.Rate(10) # 10hz
 
     #cv2.namedWindow("Maze", cv2.WINDOW_NORMAL)
     cv2.namedWindow("Maze", cv2.WINDOW_AUTOSIZE)
 
-    while not rospy.is_shutdown():
+    while True:
+
+        key = cv2.waitKey(16)
+
+        robot = robots[DEFAULT_ROBOT]
+        if key > 0:
+            if key == 27:
+                break
+            if key == 82: # up
+                robot.v = 3.0
+            if key == 84: # down
+                robot.v = -3.0
+
+            if key == 81: # left
+                robot.w = 0.8
+            if key == 83: # right
+                robot.w = -0.8
+            if key == 115: # s
+                cv2.imwrite("map.png",Maze.render(robots))
+                with open("map.yaml",'w') as f:
+                    yaml.dump({'image':'map.png',
+                            'resolution':1./Maze.M2PX,
+                            'origin': [0.0, 0.0, 0.0],
+                            'occupied_thresh': 0.65,
+                            'free_thresh': 0.196,
+                            'negate': 0},f,default_flow_style=False)
+                print("ROS map generated (map.yaml + map.png)")
+
+        else:
+            robot.v = 0
+            robot.w = 0
 
 
         for name,robot in list(robots.items()):
-            robot.step(publish_odom=True, publish_tf=True, publish_laser=True)
+            robot.step()
 
         Maze.show(robots)
 
-        rate.sleep()
 
     cv2.destroyAllWindows()
 
