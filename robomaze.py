@@ -1,43 +1,46 @@
 #! /usr/bin/env python3
 
+from os import stat
 import yaml
 import time
 import random
 import cv2
 import numpy as np
-from math import cos, sin,pi,floor,sqrt
+from math import tanh, cos, sin, pi, floor, sqrt
 
-RES_ROOT="res/"
-FLOOR=1
-TOP=2
-BOTTOM=3
-LEFT=4
-RIGHT=5
-TOP_LEFT_CVX=6
-TOP_LEFT_CCV=7
-TOP_RIGHT_CVX=8
-TOP_RIGHT_CCV=9
-BOTTOM_LEFT_CVX=10
-BOTTOM_LEFT_CCV=11
-BOTTOM_RIGHT_CVX=12
-BOTTOM_RIGHT_CCV=13
+RES_ROOT = "res/"
+FLOOR = 1
+TOP = 2
+BOTTOM = 3
+LEFT = 4
+RIGHT = 5
+TOP_LEFT_CVX = 6
+TOP_LEFT_CCV = 7
+TOP_RIGHT_CVX = 8
+TOP_RIGHT_CCV = 9
+BOTTOM_LEFT_CVX = 10
+BOTTOM_LEFT_CCV = 11
+BOTTOM_RIGHT_CVX = 12
+BOTTOM_RIGHT_CCV = 13
 
-BOTTOM_TOP_RIGHT=14
-BOTTOM_TOP_LEFT=15
-BOTTOM_LEFT_RIGHT=16
-TOP_LEFT_RIGHT=17
-BOTTOM_TOP=18
-LEFT_RIGHT=19
+BOTTOM_TOP_RIGHT = 14
+BOTTOM_TOP_LEFT = 15
+BOTTOM_LEFT_RIGHT = 16
+TOP_LEFT_RIGHT = 17
+BOTTOM_TOP = 18
+LEFT_RIGHT = 19
 
-ROBOT=cv2.imread(RES_ROOT + "walle_top.png",cv2.IMREAD_UNCHANGED)
-ROBOT_ALPHA = ROBOT[:,:,3]
-ROBOT_RGB = ROBOT[:,:,:3]
+ROBOT = cv2.imread(RES_ROOT + "walle_top.png", cv2.IMREAD_UNCHANGED)
+ROBOT_ALPHA = ROBOT[:, :, 3]
+ROBOT_RGB = ROBOT[:, :, :3]
 
-FREE_SPACE="free_space"
-RFID_TAG="rfid_tag"
+FREE_SPACE = "free_space"
+RFID_TAG = "rfid_tag"
+
+RFID_RANGE = 10
 
 TILES = {
-        FLOOR: [cv2.imread(RES_ROOT + "floor2.jpg"),cv2.imread(RES_ROOT + "floor.jpg"),cv2.imread(RES_ROOT + "floor.jpg"),cv2.imread(RES_ROOT + "floor.jpg")],
+        FLOOR: [cv2.imread(RES_ROOT + "floor2.jpg"), cv2.imread(RES_ROOT + "floor.jpg"), cv2.imread(RES_ROOT + "floor.jpg"), cv2.imread(RES_ROOT + "floor.jpg")],
         TOP: cv2.imread(RES_ROOT + "top.jpg"),
         BOTTOM: cv2.imread(RES_ROOT + "bottom.jpg"),
         LEFT: cv2.imread(RES_ROOT + "left.jpg"),
@@ -51,62 +54,68 @@ TILES = {
         BOTTOM_RIGHT_CVX: cv2.imread(RES_ROOT + "bottom_right_cvx.jpg"),
         BOTTOM_RIGHT_CCV: cv2.imread(RES_ROOT + "bottom_right_ccv.jpg"),
 
-        BOTTOM_TOP_RIGHT:cv2.imread(RES_ROOT + "bottom_top_right.jpg"),
-        BOTTOM_TOP_LEFT:cv2.imread(RES_ROOT + "bottom_top_left.jpg"),
-        BOTTOM_LEFT_RIGHT:cv2.imread(RES_ROOT + "bottom_left_right.jpg"),
-        TOP_LEFT_RIGHT:cv2.imread(RES_ROOT + "top_left_right.jpg"),
-        BOTTOM_TOP:cv2.imread(RES_ROOT + "bottom_top.jpg"),
-        LEFT_RIGHT:cv2.imread(RES_ROOT + "left_right.jpg"),
+        BOTTOM_TOP_RIGHT: cv2.imread(RES_ROOT + "bottom_top_right.jpg"),
+        BOTTOM_TOP_LEFT: cv2.imread(RES_ROOT + "bottom_top_left.jpg"),
+        BOTTOM_LEFT_RIGHT: cv2.imread(RES_ROOT + "bottom_left_right.jpg"),
+        TOP_LEFT_RIGHT: cv2.imread(RES_ROOT + "top_left_right.jpg"),
+        BOTTOM_TOP: cv2.imread(RES_ROOT + "bottom_top.jpg"),
+        LEFT_RIGHT: cv2.imread(RES_ROOT + "left_right.jpg"),
         }
-        
-class Maze:
-    height= 20 # in tiles
-    width = 20 # in tiles
-    TILESIZE=2 #m
-    M2PX=16 # TILESIZE[m] * M2PX = TILESIZE[px]
 
-    data = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-            0,1,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,1,1,0,
-            0,1,0,1,1,1,1,0,6,1,1,1,0,1,1,1,1,1,1,0,
-            0,1,0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,1,1,0,
-            0,1,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,
-            0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,
-            0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,1,0,0,
-            0,1,1,1,1,0,1,1,1,1,1,0,4,1,1,1,0,1,0,0,
-            0,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1,0,0,
-            0,1,1,1,1,0,1,1,3,1,1,0,1,1,1,5,0,1,0,0,
-            0,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1,0,0,
-            0,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1,0,0,
-            0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,
-            0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,
-            0,1,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1,0,0,
-            0,1,1,1,1,1,0,1,1,1,1,0,1,1,7,1,0,1,0,0,
-            0,1,1,1,1,2,0,1,1,1,1,0,1,1,1,1,0,1,0,0,
-            0,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,
-            0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,
-            0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+
+class Maze:
+    height = 20  # in tiles
+    width = 20  # in tiles
+    TILESIZE = 2  # m
+    M2PX = 16  # TILESIZE[m] * M2PX = TILESIZE[px]
+
+    #  y=height
+    #  |
+    #  |
+    #  x=0,y=0 -------------->   x=width
+    #
+    data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0,
+            0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0,
+            0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0,
+            0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+            0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+            0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0,
+            0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0,
+            0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0,
+            0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 3, 1, 1, 0, 1, 1, 0,
+            0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0,
+            0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0,
+            0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 5, 0, 1, 1, 0,
+            0, 1, 1, 1, 1, 1, 0, 1, 2, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0,
+            0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 4, 0, 1, 1, 0,
+            0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0,
+            0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     @staticmethod
-    def is_obstacle(x_m,y_m):
+    def is_obstacle(x_m, y_m):
         """x_m and y_m must be provided in meters
         """
 
         x = int(floor(round(x_m)/Maze.TILESIZE))
         y = int(floor(round(y_m)/Maze.TILESIZE))
 
-        return Maze.is_obstacle_raw(x,y)
+        return Maze.is_obstacle_raw(x, y)
 
     @staticmethod
-    def is_obstacle_raw(x,y):
-        """x_m and y_m must be provided in meters
-        """
+    def is_obstacle_raw(x, y):
 
         if x >= 0 and \
            y >= 0 and \
            x < Maze.width and \
            y < Maze.height and \
-           Maze.data[x + (Maze.height - y - 1) * Maze.width]:
-            return False
+           Maze.data[x + (Maze.height - 1 - y) * Maze.width]:
+              # print(
+              #     f"Maze data at ({x}, {y}): {Maze.data[x + (Maze.height - y - 1) * Maze.width]}")
+               return False
         return True
 
     @staticmethod
@@ -197,6 +206,156 @@ class Maze:
         return None
 
     @staticmethod
+    def line_intersection(line1, line2):
+
+        xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
+        ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
+
+        def det(a, b):
+            return a[0] * b[1] - a[1] * b[0]
+
+        div = det(xdiff, ydiff)
+        if div == 0:
+            return None
+
+        d = (det(*line1), det(*line2))
+        x = det(d, xdiff) / div
+        y = det(d, ydiff) / div
+        return x, y
+
+
+    @staticmethod
+    def ccw(A,B,C):
+        Ax, Ay = A
+        Bx, By = B
+        Cx, Cy = C
+        return (Cy-Ay) * (Bx-Ax) > (By-Ay) * (Cx-Ax)
+
+    @staticmethod
+    def segment_intersect(A,B,C,D):
+        """ Return true if line segments AB and CD intersect
+        """
+        return Maze.ccw(A,C,D) != Maze.ccw(B,C,D) and Maze.ccw(A,B,C) != Maze.ccw(A,B,D)
+
+
+    @staticmethod
+    def get_ray_point(x,y, theta, dist):
+        return x + cos(theta) * dist, y + sin(theta) * dist
+
+    @staticmethod
+    def dist(a, b):
+        x,y=a
+        px,py = b
+        return (x-px) * (x-px) + (y-py)*(y-py)
+
+    @staticmethod
+    def to_px(p):
+        """
+        Converts a point in meters into pixel coordinates, with (0, 0) at the bottom left, Y up, X right
+        """
+        x, y = p
+        return int(x*Maze.M2PX), int((Maze.height * Maze.TILESIZE - y) * Maze.M2PX - 1)
+
+    @staticmethod
+    def cell_intersection(x, y, theta, maze_x, maze_y, max_range=10, debug_img=None):
+
+        #print(f"Looking for intersections with cell at {maze_x}, {maze_y} from {x},{y}")
+
+        A = maze_x, maze_y
+        B = (maze_x + Maze.TILESIZE),maze_y
+        C = (maze_x + Maze.TILESIZE), (maze_y + Maze.TILESIZE)
+        D = maze_x, (maze_y + Maze.TILESIZE)
+
+        if debug_img is not None:
+            print(f"Cell ({maze_x},{maze_y}) is obstacle: {Maze.is_obstacle(maze_x, maze_y)}")
+
+            cv2.line(debug_img, Maze.to_px(A), Maze.to_px(B) , (150,250,150), 1)
+            cv2.line(debug_img, Maze.to_px(C), Maze.to_px(B) , (150,250,150), 1)
+            cv2.line(debug_img, Maze.to_px(A), Maze.to_px(D) , (150,250,150), 1)
+            cv2.line(debug_img, Maze.to_px(C), Maze.to_px(D) , (150,250,150), 1)
+
+
+        R0 = x, y
+        R1 = Maze.get_ray_point(x,y,theta,max_range)
+
+        if debug_img is not None:
+            cv2.line(debug_img, Maze.to_px(R0), Maze.to_px(R1) , (150,150,250), 1)
+
+        intersections = {}
+
+        for s,direction in [((A,B),"up"), ((B,C),"right"), ((C,D),"down"), ((D,A),"left")]:
+            intersect = Maze.segment_intersect(R0, R1, *s)
+            if intersect:
+                intersection = Maze.line_intersection(s, (R0, R1))
+                intersections[Maze.dist((x,y), intersection)] = (intersection, direction)
+                if debug_img is not None:
+                    print(f"Ray ({x},{y},theta={theta*180/pi}) -> Intersection with cell ({maze_x},{maze_y}) at d={sqrt(Maze.dist((x,y), intersection))}m")
+                    cv2.circle(debug_img, Maze.to_px(intersection), 3,(150,150,150),-1)
+                    cv2.imshow('Maze',debug_img)
+                    cv2.waitKey()
+
+
+
+        # the ray does not cross this cell
+        if not intersections:
+            return None
+
+        max_dist = max(intersections.keys())
+        min_dist = min(intersections.keys())
+
+        # less than 2 intersections? our ray did not fully traverse the cell: out of range!
+        if len(intersections) == 1:
+            return max_range*max_range + 1, None
+
+        #print(f"Checking if {maze_x},{maze_y} is obstacle...")
+        if Maze.is_obstacle(maze_x, maze_y):
+
+            # the cell is an obstacle. Returns the distance + coordinate relative to robot.
+
+            hx,hy = intersections[min_dist][0]
+            if debug_img is not None:
+                #print(f"Yes. Keeping point at d={sqrt(min_dist)}m")
+                cv2.circle(debug_img, Maze.to_px((hx,hy)), 3,(10,50,10),-1)
+
+            return min_dist, (hx-x, hy-y)
+
+
+        else:
+            #print(f"No. Continuing")
+            # the ray crosses the cell, but the cell is empty. Recursively looks for a wall
+            intersection, direction = intersections[max_dist]
+            next_maze_x, next_maze_y = maze_x, maze_y 
+            if direction == "up":
+                next_maze_y -= Maze.TILESIZE
+            if direction == "down":
+                next_maze_y += Maze.TILESIZE
+            if direction == "right":
+                next_maze_x += Maze.TILESIZE
+            if direction == "left":
+                next_maze_x -= Maze.TILESIZE
+
+            return Maze.cell_intersection(x,y, theta, next_maze_x, next_maze_y, max_range, debug_img)
+
+
+    @staticmethod
+    def raycasting(x,y,theta, max_range=10, debug_img = None):
+
+
+        ranges = []
+        hitpoints = []
+        for maze_x, maze_y in Maze.get_neighbour_cells(x, y):
+            hit = Maze.cell_intersection(x,y,theta,maze_x, maze_y, max_range, debug_img)
+            if hit is not None:
+                dist, point = hit
+                ranges.append(sqrt(dist))
+                if point is not None: # might be None if we are out of the range of the laser
+                    hitpoints.append(point)
+                break
+
+        return ranges, hitpoints
+
+
+    @staticmethod
     def overlay_transparent(background, overlay, x, y):
 
         background_width = background.shape[1]
@@ -243,36 +402,58 @@ class Maze:
         rfid_overlay = np.zeros((Maze.height*Maze.TILESIZE*Maze.M2PX,Maze.width*Maze.TILESIZE*Maze.M2PX,4), np.uint8)
         rfid_overlay[:] = (0,0,0,0)
 
-        for y in range(Maze.height):
-            for x in range(Maze.width):
-                px = x * Maze.TILESIZE * Maze.M2PX
-                w = Maze.TILESIZE * Maze.M2PX
-                px2 = (x+1) * Maze.TILESIZE * Maze.M2PX
-                py = (Maze.height - y - 1) * Maze.TILESIZE * Maze.M2PX
-                py2 = (Maze.height - y) * Maze.TILESIZE * Maze.M2PX
+        rfid_power = np.zeros((Maze.height*Maze.TILESIZE*Maze.M2PX,Maze.width*Maze.TILESIZE*Maze.M2PX,4), np.uint8)
+        rfid_power[:] = (0,0,0,0)
 
-                if Maze.is_obstacle(x*Maze.TILESIZE, y*Maze.TILESIZE):
 
-                    #import pdb;pdb.set_trace()
-                    tile = Maze.get_edge_tile(x,y)
+        for Y in range(Maze.height):
+            for X in range(Maze.width):
+                x = X * Maze.TILESIZE # in meters
+                y = Y * Maze.TILESIZE # in meters
+                px = X * Maze.TILESIZE * Maze.M2PX # in pixels
+                w = Maze.TILESIZE * Maze.M2PX # in pixels
+                px2 = (X+1) * Maze.TILESIZE * Maze.M2PX
+                py = (Maze.height - Y - 1) * Maze.TILESIZE * Maze.M2PX
+                py2 = (Maze.height - Y) * Maze.TILESIZE * Maze.M2PX
+                #print(f"Tile at ({x}m,{y}m)")
+
+                if Maze.is_obstacle(x,y):
+
+                    tile = Maze.get_edge_tile(X,Y)
                     if tile is not None:
                         img[py:py2,px:px2] = tile
                     else:
                         cv2.rectangle(img, (px, py), (px2,py2), (0,0,0),-1)
                 else:
 
-                    item_type, name = Maze.get_item(x*Maze.TILESIZE, y*Maze.TILESIZE)
+                    item_type, name = Maze.get_item(x, y)
 
                     if item_type == FREE_SPACE:
-                        img[py:py2,px:px2] = random.choice(TILES[FLOOR])
-                    else:
-                        img[py:py2,px:px2] = random.choice(TILES[FLOOR])
+                        #img[py:py2,px:px2] = random.choice(TILES[FLOOR])
+                        pass
+                    else: # RFID tag!
+                        #img[py:py2,px:px2] = random.choice(TILES[FLOOR])
 
-                        #cv2.circle(img[py:py2,px:px2], (int(Maze.TILESIZE * Maze.M2PX/2),int(Maze.TILESIZE * Maze.M2PX/2)),5,(100,100,200),-1)
-                        cv2.circle(rfid_overlay, (int(px + w/2), int(py + w/2)), 5 * Maze.M2PX,(200,100,50,70),-1)
-                        cv2.putText(rfid_overlay, name, (int(px + w/2) - 20, int(py + w/2) + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (180, 100, 80,200), 1) #font stroke
+                        rfid_x, rfid_y = x + Maze.TILESIZE/2, y + Maze.TILESIZE/2 # in meters
+                        rfid_X, rfid_Y = Maze.to_px((rfid_x,rfid_y))
 
-                        cv2.circle(img, (int(px + w/2), int(py + w/2)), 5,(100,100,220),-1)
+                        rfid_hitpoints = []
+                        for theta in np.arange(0, 2*pi, 2*pi/10):
+                            d, hitpoint = Maze.raycasting(rfid_x, rfid_y,theta,max_range=RFID_RANGE,debug_img=None)
+                            rfid_hitpoints += hitpoint
+                        for hit in rfid_hitpoints:
+                                hx = int(hit[0] * Maze.M2PX)
+                                hy  = int(hit[1] * Maze.M2PX)
+                                #cv2.line(img, (rfid_X,rfid_Y), (hx+rfid_X,-hy+rfid_Y) , (180,180,180), 1)
+                                #cv2.circle(img, (hx+rfid_X,-hy+rfid_Y), 2,(220,220,220),-1)
+
+
+                        #cv2.circle(rfid_overlay, (rfid_X, rfid_Y), RFID_RANGE * Maze.M2PX,(200,100,50,70),-1)
+                        rfid = RFID(rfid_x, rfid_y)
+                        rfid.sample(rfid_power)
+                        cv2.putText(rfid_overlay, name, (rfid_X - 20, rfid_Y + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (180, 100, 80,200), 1) #font stroke
+
+                        cv2.circle(img, (rfid_X, rfid_Y), 5,(100,100,220),-1)
 
         for name, robot in list(robots.items()):
             X=int(robot.x * Maze.M2PX)
@@ -294,6 +475,7 @@ class Maze:
 
             cv2.putText(img, name, (X, Y+int(Robot.RADIUS * Maze.M2PX) + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (180, 200, 180), 2) #font stroke
 
+        Maze.overlay_transparent(img, rfid_power,0,0)
         Maze.overlay_transparent(img, rfid_overlay,0,0)
 
         return img
@@ -304,6 +486,44 @@ class Maze:
         img = Maze.render(robots)
         cv2.imshow('Maze',img)
 
+
+class RFID:
+
+    MAX_ATTENUATION=60 #dB
+
+    def __init__(self, x, y, max_range=10):
+        self.x=x # in meters
+        self.y=y # in meters
+        self.range = max_range
+
+    def power(self, x, y):
+        dist = sqrt((x-self.x)*(x-self.x) + (y-self.y)*(y-self.y))
+
+        if dist > self.range:
+            return -RFID.MAX_ATTENUATION
+
+        # attenuation function (limit -> -MAX_ATTENUATION dB)
+        p = -RFID.MAX_ATTENUATION*tanh(dist/3)
+        return p
+
+    def sample(self, img,grid_size=0.5):
+
+        for dx in np.arange(self.x - self.range, self.x + self.range, grid_size):
+            for dy in np.arange(self.y - self.range, self.y + self.range, grid_size):
+                if dx < 0 or dy < 0 or dx >= Maze.width * Maze.TILESIZE or dy >= Maze.height * Maze.TILESIZE:
+                    continue
+
+                p = self.power(dx,dy)
+
+                if p > -RFID.MAX_ATTENUATION:
+
+                    c = int((1 - (-p/RFID.MAX_ATTENUATION)) * 200)
+
+                    if c > img[Maze.to_px((dx,dy))][3]:
+                        #if img[Maze.to_px((dx,dy))][3] > 0:
+                        #    print(f"old c = {img[Maze.to_px((dx,dy))][3]}, new c = {c}")
+                        cv2.rectangle(img, Maze.to_px((dx-grid_size/2, dy-grid_size/2)), Maze.to_px((dx+grid_size/2,dy+grid_size/2)), (0,50,150,c),-1)
+    
 
 class Robot:
     
