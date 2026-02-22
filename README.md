@@ -1,6 +1,6 @@
 # Robomaze (ROS2)
 
-Adds of this branch:
+Changes of this branch:
 * Port of robomaze into port 2.
 * Add method of random generator
 
