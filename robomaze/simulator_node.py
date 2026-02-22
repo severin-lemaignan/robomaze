@@ -21,6 +21,8 @@ class MazeSimulatorNode(Node):
         self.declare_parameter('random_maze', False)
         self.declare_parameter('seed', -1)
         self.declare_parameter('enable_goal', False)
+        self.declare_parameter('map_width', Maze.width)
+        self.declare_parameter('map_height', Maze.height)
 
         # Load tile and robot images
         pkg_share = get_package_share_directory('robomaze')
@@ -31,14 +33,30 @@ class MazeSimulatorNode(Node):
         use_random = self.get_parameter('random_maze').value
         seed_param = self.get_parameter('seed').value
         enable_goal = self.get_parameter('enable_goal').value
+        map_width = int(self.get_parameter('map_width').value)
+        map_height = int(self.get_parameter('map_height').value)
 
         if use_random:
+            if map_width < 5 or map_height < 5:
+                self.get_logger().warn(
+                    'map_width/map_height must be >= 5. '
+                    'Falling back to 20x20.'
+                )
+                map_width, map_height = 20, 20
+            Maze.width = map_width
+            Maze.height = map_height
             seed = seed_param if seed_param >= 0 else None
             actual_seed = Maze.generate_random(seed)
             self.get_logger().info(
-                f'Generated random maze with seed: {actual_seed}')
+                f'Generated random maze {Maze.width}x{Maze.height} '
+                f'with seed: {actual_seed}')
         else:
             self.get_logger().info('Using default hardcoded maze.')
+            if map_width != 20 or map_height != 20:
+                self.get_logger().warn(
+                    'map_width/map_height are ignored unless random_maze:=true '
+                    '(fixed map is 20x20).'
+                )
 
         if enable_goal:
             goal_tile = Maze.set_goal_top_right_open()

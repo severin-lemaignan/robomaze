@@ -58,12 +58,45 @@ ros2 run robomaze simulator --ros-args -p random_maze:=true -p seed:=1234
 
 # Random map with goal enabled
 ros2 run robomaze simulator --ros-args -p random_maze:=true -p enable_goal:=true
+
+# Random map with custom size (width x height)
+ros2 run robomaze simulator --ros-args -p random_maze:=true -p map_width:=31 -p map_height:=25
 ```
 
 Notes:
 - `random_maze:=false` (default) uses the fixed built-in maze.
 - `seed:=-1` (default) means a random seed is chosen automatically.
 - `enable_goal:=false` (default) disables goal, race finish, and winners updates.
+- `map_width:=20` and `map_height:=20` by default.
+- `map_width`/`map_height` are only used when `random_maze:=true`.
+
+### Change map size
+
+For random mazes, prefer args:
+
+```bash
+ros2 run robomaze simulator --ros-args -p random_maze:=true -p map_width:=31 -p map_height:=25
+```
+
+You can still hardcode defaults in `robomaze/maze.py`:
+
+```python
+class Maze:
+    height = 20
+    width = 20
+```
+
+Update `height` and `width`, then rebuild:
+
+```bash
+cd ~/ros2_ws
+colcon build --packages-select robomaze
+source install/setup.bash
+```
+
+Tips:
+- Prefer odd values for cleaner random-maze carving.
+- Keep both dimensions `>= 5`.
 
 ### Spawn a robot
 
