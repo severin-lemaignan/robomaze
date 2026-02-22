@@ -3,6 +3,8 @@
 Changes of this branch:
 * Port of robomaze into port 2.
 * Add method of random generator
+* Add visual goal and goal-reached race handling (toggle via args)
+* Remove robots from arena when they reach goal, keep winners ranking
 
 An interactive 2D maze simulator for ROS2. Spawn robots, control them, and
 access their odometry, laser scans, and TF frames!
@@ -39,6 +41,10 @@ ros2 run robomaze simulator
 
 An OpenCV window will open showing the maze.
 
+Notes:
+- Goal is disabled by default.
+- Enable goal with: `--ros-args -p enable_goal:=true`
+
 ### Random map generation
 
 Run simulator with parameters:
@@ -49,11 +55,15 @@ ros2 run robomaze simulator --ros-args -p random_maze:=true
 
 # Reproducible random map (same seed => same maze)
 ros2 run robomaze simulator --ros-args -p random_maze:=true -p seed:=1234
+
+# Random map with goal enabled
+ros2 run robomaze simulator --ros-args -p random_maze:=true -p enable_goal:=true
 ```
 
 Notes:
 - `random_maze:=false` (default) uses the fixed built-in maze.
 - `seed:=-1` (default) means a random seed is chosen automatically.
+- `enable_goal:=false` (default) disables goal, race finish, and winners updates.
 
 ### Spawn a robot
 
@@ -81,6 +91,8 @@ ros2 run robomaze keyboard_teleop --ros-args -p robot_name:=WallE1
 | `/<name>/scan` | `sensor_msgs/LaserScan` | Simulator publishes | Lidar: -45 to +45 deg, 2 deg steps |
 | `/<name>/odom` | `nav_msgs/Odometry` | Simulator publishes | Robot pose and velocity |
 | `/<name>/cmd_vel` | `geometry_msgs/Twist` | You publish | `linear.x` and `angular.z` |
+| `/goal_reached` | `std_msgs/String` | Simulator publishes | Robot name that just reached the goal (only when `enable_goal:=true`) |
+| `/winners` | `std_msgs/String` | Simulator publishes | Current ranking, e.g. `#1 WallE1 (12.3s), #2 WallE2 (14.8s)` (only when `enable_goal:=true`) |
 
 ### TF Frames
 

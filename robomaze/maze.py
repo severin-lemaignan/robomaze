@@ -168,6 +168,22 @@ class Maze:
         Maze.goal = (tile_x, tile_y)
 
     @staticmethod
+    def clear_goal():
+        """Disable goal rendering/checking."""
+        Maze.goal = None
+
+    @staticmethod
+    def set_goal_top_right_open():
+        """Set goal to the top-right-most open tile. Returns (x, y) or None."""
+        for y in range(Maze.height - 1, -1, -1):
+            for x in range(Maze.width - 1, -1, -1):
+                if not Maze.is_obstacle_raw(x, y):
+                    Maze.set_goal(x, y)
+                    return (x, y)
+        Maze.goal = None
+        return None
+
+    @staticmethod
     def goal_position_meters():
         """Return goal position in meters (center of tile), or None."""
         if Maze.goal is None:
@@ -241,11 +257,8 @@ class Maze:
         for row in grid:
             Maze.data.extend(row)
 
-        # Set goal at top-right open area
-        # Find the top-right-most open cell
-        goal_x, goal_y = w - 2, h - 2  # in grid coords (top-to-bottom)
-        # Convert to tile coords (y-up): tile_y = height - grid_y - 1
-        Maze.set_goal(goal_x, Maze.height - goal_y - 1)
+        # Set goal at the top-right-most open tile in the generated map.
+        Maze.set_goal_top_right_open()
 
         return seed
 

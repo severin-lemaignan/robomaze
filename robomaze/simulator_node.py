@@ -20,6 +20,7 @@ class MazeSimulatorNode(Node):
         # Parameters
         self.declare_parameter('random_maze', False)
         self.declare_parameter('seed', -1)
+        self.declare_parameter('enable_goal', False)
 
         # Load tile and robot images
         pkg_share = get_package_share_directory('robomaze')
@@ -29,6 +30,7 @@ class MazeSimulatorNode(Node):
         # Generate random maze if requested
         use_random = self.get_parameter('random_maze').value
         seed_param = self.get_parameter('seed').value
+        enable_goal = self.get_parameter('enable_goal').value
 
         if use_random:
             seed = seed_param if seed_param >= 0 else None
@@ -36,12 +38,19 @@ class MazeSimulatorNode(Node):
             self.get_logger().info(
                 f'Generated random maze with seed: {actual_seed}')
         else:
-            # Use the default hardcoded maze — set goal at top-right open area
-            Maze.set_goal(18, 18)
+            self.get_logger().info('Using default hardcoded maze.')
+
+        if enable_goal:
+            goal_tile = Maze.set_goal_top_right_open()
+            self.get_logger().info(f'Goal enabled at tile: {goal_tile}')
+        else:
+            Maze.clear_goal()
+            self.get_logger().info('Goal disabled (enable with -p enable_goal:=true)')
 
         self.robots = {}
         self.spawn_idx = 0
         self.finished_robots = set()
+        self.winners = []
 
         # Subscribe to robot creation requests
         self.create_sub = self.create_subscription(
@@ -49,6 +58,7 @@ class MazeSimulatorNode(Node):
 
         # Publisher for goal reached announcements
         self.goal_pub = self.create_publisher(String, 'goal_reached', 10)
+        self.winners_pub = self.create_publisher(String, 'winners', 10)
 
         # 10 Hz simulation loop
         self.timer = self.create_timer(0.1, self.timer_callback)
@@ -78,6 +88,7 @@ class MazeSimulatorNode(Node):
         self.get_logger().info(f'Created robot: {name}')
 
     def timer_callback(self):
+        to_remove = []
         for name, robot in list(self.robots.items()):
             robot.step(publish_odom=True, publish_tf=True, publish_laser=True)
 
@@ -86,13 +97,29 @@ class MazeSimulatorNode(Node):
                     Maze.check_goal_reached(robot.x, robot.y):
                 self.finished_robots.add(name)
                 elapsed = time.time() - robot.created
-                place = len(self.finished_robots)
+                self.winners.append((name, elapsed))
+                place = len(self.winners)
                 msg = String()
                 msg.data = name
                 self.goal_pub.publish(msg)
                 self.get_logger().info(
                     f'*** {name} reached the goal! '
                     f'Place: #{place}, Time: {elapsed:.1f}s ***')
+                to_remove.append(name)
+
+        for name in to_remove:
+            self.robots.pop(name, None)
+            self.get_logger().info(f'Removed finished robot: {name}')
+
+        if to_remove:
+            ranking = ', '.join(
+                f'#{idx + 1} {winner} ({t:.1f}s)'
+                for idx, (winner, t) in enumerate(self.winners)
+            )
+            self.get_logger().info(f'Winners so far: {ranking}')
+            ranking_msg = String()
+            ranking_msg.data = ranking
+            self.winners_pub.publish(ranking_msg)
 
         Maze.show(self.robots)
 
