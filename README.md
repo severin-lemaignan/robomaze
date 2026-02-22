@@ -34,10 +34,26 @@ source install/setup.bash
 ### Start the simulator
 
 ```bash
-ros2 launch robomaze simulator_launch.py
+ros2 run robomaze simulator
 ```
 
 An OpenCV window will open showing the maze.
+
+### Random map generation
+
+Run simulator with parameters:
+
+```bash
+# New random map each run
+ros2 run robomaze simulator --ros-args -p random_maze:=true
+
+# Reproducible random map (same seed => same maze)
+ros2 run robomaze simulator --ros-args -p random_maze:=true -p seed:=1234
+```
+
+Notes:
+- `random_maze:=false` (default) uses the fixed built-in maze.
+- `seed:=-1` (default) means a random seed is chosen automatically.
 
 ### Spawn a robot
 

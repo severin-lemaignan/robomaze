@@ -1,6 +1,5 @@
 from setuptools import setup
 from glob import glob
-import os
 
 package_name = 'robomaze'
 
@@ -11,7 +10,6 @@ setup(
     data_files=[
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name + '/launch', glob('launch/*.py')),
         ('share/' + package_name + '/res', glob('res/*')),
         ('share/' + package_name + '/cfg', glob('cfg/*')),
     ],
