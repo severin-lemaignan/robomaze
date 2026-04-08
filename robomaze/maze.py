@@ -1,3 +1,4 @@
+import os
 import random
 from collections import deque
 
@@ -25,11 +26,50 @@ TOP_LEFT_RIGHT = 17
 BOTTOM_TOP = 18
 LEFT_RIGHT = 19
 
+# Tileset grid layout: maps tile constant -> (row, col) in tileset.png
+# Floor variants occupy 3 slots; all other tiles occupy 1 slot each.
+# Grid is 5 columns wide, tiles are 128x128 pixels in the tileset.
+TILESET_COLS = 5
+TILESET_TILE_SIZE = 128
+TILESET_POSITIONS = {
+    TOP: (0, 0),
+    BOTTOM: (0, 1),
+    LEFT: (0, 2),
+    RIGHT: (0, 3),
+    TOP_LEFT_CVX: (0, 4),
+    TOP_LEFT_CCV: (1, 0),
+    TOP_RIGHT_CVX: (1, 1),
+    TOP_RIGHT_CCV: (1, 2),
+    BOTTOM_LEFT_CVX: (1, 3),
+    BOTTOM_LEFT_CCV: (1, 4),
+    BOTTOM_RIGHT_CVX: (2, 0),
+    BOTTOM_RIGHT_CCV: (2, 1),
+    BOTTOM_TOP_RIGHT: (2, 2),
+    BOTTOM_TOP_LEFT: (2, 3),
+    BOTTOM_LEFT_RIGHT: (2, 4),
+    TOP_LEFT_RIGHT: (3, 0),
+    BOTTOM_TOP: (3, 1),
+    LEFT_RIGHT: (3, 2),
+}
+# Floor variants: list of (row, col) positions
+TILESET_FLOOR_POSITIONS = [(3, 3), (3, 4), (4, 0)]
+
+TILESET_BACKGROUND_POSITIONS = [(4, 1)]
+
+# Special key for the background tile (not a maze tile type)
+BACKGROUND = 0
+
 # Module-level globals populated by init_assets()
 TILES = {}
 ROBOT = None
 ROBOT_ALPHA = None
 ROBOT_RGB = None
+
+
+def _slice_tile(sheet, row, col):
+    """Extract a single tile from the tileset sheet."""
+    s = TILESET_TILE_SIZE
+    return sheet[row * s:(row + 1) * s, col * s:(col + 1) * s].copy()
 
 
 def init_assets(res_root):
@@ -40,36 +80,59 @@ def init_assets(res_root):
     """
     global TILES, ROBOT, ROBOT_ALPHA, ROBOT_RGB
 
+    # Load robot sprite (always a separate file — different size and RGBA)
     ROBOT = cv2.imread(res_root + "walle_top.png", cv2.IMREAD_UNCHANGED)
     ROBOT_ALPHA = ROBOT[:, :, 3]
     ROBOT_RGB = ROBOT[:, :, :3]
 
-    TILES.update({
-        FLOOR: [
-            cv2.imread(res_root + "floor2.jpg"),
-            cv2.imread(res_root + "floor.jpg"),
-            cv2.imread(res_root + "floor.jpg"),
-            cv2.imread(res_root + "floor.jpg"),
-        ],
-        TOP: cv2.imread(res_root + "top.jpg"),
-        BOTTOM: cv2.imread(res_root + "bottom.jpg"),
-        LEFT: cv2.imread(res_root + "left.jpg"),
-        RIGHT: cv2.imread(res_root + "right.jpg"),
-        TOP_LEFT_CVX: cv2.imread(res_root + "top_left_cvx.jpg"),
-        TOP_LEFT_CCV: cv2.imread(res_root + "top_left_ccv.jpg"),
-        TOP_RIGHT_CVX: cv2.imread(res_root + "top_right_cvx.jpg"),
-        TOP_RIGHT_CCV: cv2.imread(res_root + "top_right_ccv.jpg"),
-        BOTTOM_LEFT_CVX: cv2.imread(res_root + "bottom_left_cvx.jpg"),
-        BOTTOM_LEFT_CCV: cv2.imread(res_root + "bottom_left_ccv.jpg"),
-        BOTTOM_RIGHT_CVX: cv2.imread(res_root + "bottom_right_cvx.jpg"),
-        BOTTOM_RIGHT_CCV: cv2.imread(res_root + "bottom_right_ccv.jpg"),
-        BOTTOM_TOP_RIGHT: cv2.imread(res_root + "bottom_top_right.jpg"),
-        BOTTOM_TOP_LEFT: cv2.imread(res_root + "bottom_top_left.jpg"),
-        BOTTOM_LEFT_RIGHT: cv2.imread(res_root + "bottom_left_right.jpg"),
-        TOP_LEFT_RIGHT: cv2.imread(res_root + "top_left_right.jpg"),
-        BOTTOM_TOP: cv2.imread(res_root + "bottom_top.jpg"),
-        LEFT_RIGHT: cv2.imread(res_root + "left_right.jpg"),
-    })
+    tileset_path = os.path.join(res_root, "tileset.png")
+    if os.path.exists(tileset_path):
+        # Load with alpha channel preserved
+        sheet = cv2.imread(tileset_path, cv2.IMREAD_UNCHANGED)
+        # Load wall/edge tiles from tileset
+        for tile_type, (row, col) in TILESET_POSITIONS.items():
+            TILES[tile_type] = _slice_tile(sheet, row, col)
+        # Load floor variants — weighted list
+        floor_variants = [_slice_tile(sheet, r, c)
+                          for r, c in TILESET_FLOOR_POSITIONS]
+        TILES[FLOOR] = [
+            floor_variants[0],
+            floor_variants[0],
+            floor_variants[1],
+            floor_variants[2],
+        ]
+        # Load background tile(s)
+        bg_variants = [_slice_tile(sheet, r, c)
+                       for r, c in TILESET_BACKGROUND_POSITIONS]
+        TILES[BACKGROUND] = bg_variants
+    else:
+        # Fallback: load individual tile files (no alpha)
+        TILES.update({
+            FLOOR: [
+                cv2.imread(res_root + "floor.jpg"),
+                cv2.imread(res_root + "floor.jpg"),
+                cv2.imread(res_root + "floor2.jpg"),
+                cv2.imread(res_root + "floor3.jpg"),
+            ],
+            TOP: cv2.imread(res_root + "top.jpg"),
+            BOTTOM: cv2.imread(res_root + "bottom.jpg"),
+            LEFT: cv2.imread(res_root + "left.jpg"),
+            RIGHT: cv2.imread(res_root + "right.jpg"),
+            TOP_LEFT_CVX: cv2.imread(res_root + "top_left_cvx.jpg"),
+            TOP_LEFT_CCV: cv2.imread(res_root + "top_left_ccv.jpg"),
+            TOP_RIGHT_CVX: cv2.imread(res_root + "top_right_cvx.jpg"),
+            TOP_RIGHT_CCV: cv2.imread(res_root + "top_right_ccv.jpg"),
+            BOTTOM_LEFT_CVX: cv2.imread(res_root + "bottom_left_cvx.jpg"),
+            BOTTOM_LEFT_CCV: cv2.imread(res_root + "bottom_left_ccv.jpg"),
+            BOTTOM_RIGHT_CVX: cv2.imread(res_root + "bottom_right_cvx.jpg"),
+            BOTTOM_RIGHT_CCV: cv2.imread(res_root + "bottom_right_ccv.jpg"),
+            BOTTOM_TOP_RIGHT: cv2.imread(res_root + "bottom_top_right.jpg"),
+            BOTTOM_TOP_LEFT: cv2.imread(res_root + "bottom_top_left.jpg"),
+            BOTTOM_LEFT_RIGHT: cv2.imread(res_root + "bottom_left_right.jpg"),
+            TOP_LEFT_RIGHT: cv2.imread(res_root + "top_left_right.jpg"),
+            BOTTOM_TOP: cv2.imread(res_root + "bottom_top.jpg"),
+            LEFT_RIGHT: cv2.imread(res_root + "left_right.jpg"),
+        })
 
     # Resize tiles to match the pixel grid
     tile_px = Maze.TILESIZE * Maze.M2PX
@@ -93,7 +156,7 @@ class Maze:
     height = 20
     width = 20
     TILESIZE = 5  # meters
-    M2PX = 7  # pixels per meter (TILESIZE * M2PX = tile size in pixels)
+    M2PX = 26  # pixels per meter (TILESIZE * M2PX = 130 ≈ native 128px tile size)
 
     # Goal position in tile coordinates (None = no goal)
     goal = None  # set by generate_random() or manually via set_goal()
@@ -301,6 +364,27 @@ class Maze:
         return None
 
     @staticmethod
+    def get_ccv_overlays(x, y):
+        """Return list of CCV tiles to overlay on an obstacle cell.
+
+        Concave corners are needed where two adjacent cardinal neighbors
+        are obstacles but the diagonal between them is open (not an obstacle).
+        """
+        up, down, left, right, upleft, upright, downleft, downright = \
+            Maze.get_surrounding_obstacles_raw(x, y)
+
+        overlays = []
+        if up and left and not upleft:
+            overlays.append(TILES[TOP_LEFT_CCV])
+        if up and right and not upright:
+            overlays.append(TILES[TOP_RIGHT_CCV])
+        if down and left and not downleft:
+            overlays.append(TILES[BOTTOM_LEFT_CCV])
+        if down and right and not downright:
+            overlays.append(TILES[BOTTOM_RIGHT_CCV])
+        return overlays
+
+    @staticmethod
     def overlay_transparent(background, overlay, x, y):
         background_width = background.shape[1]
         background_height = background.shape[0]
@@ -340,27 +424,52 @@ class Maze:
         # Always generate the same random floor pattern
         random.seed(1)
 
-        img = np.zeros(
-            (Maze.height * Maze.TILESIZE * Maze.M2PX,
-             Maze.width * Maze.TILESIZE * Maze.M2PX, 3),
-            np.uint8)
-        img[:] = (140, 178, 250)
+        tile_px = Maze.TILESIZE * Maze.M2PX
+        img_h = Maze.height * tile_px
+        img_w = Maze.width * tile_px
 
+        img = np.zeros((img_h, img_w, 3), np.uint8)
+
+        # Fill background with tiled background pattern
+        if BACKGROUND in TILES and TILES[BACKGROUND]:
+            bg = TILES[BACKGROUND][0]
+            # bg may be BGRA — use only BGR channels for the base fill
+            bg_rgb = bg[:, :, :3] if bg.shape[2] >= 4 else bg
+            for y in range(Maze.height):
+                for x in range(Maze.width):
+                    px = x * tile_px
+                    py = (Maze.height - y - 1) * tile_px
+                    img[py:py + tile_px, px:px + tile_px] = bg_rgb
+        else:
+            img[:] = (140, 178, 250)
+
+        # First pass: place floor and wall tiles
         for y in range(Maze.height):
             for x in range(Maze.width):
-                px = x * Maze.TILESIZE * Maze.M2PX
-                px2 = (x + 1) * Maze.TILESIZE * Maze.M2PX
-                py = (Maze.height - y - 1) * Maze.TILESIZE * Maze.M2PX
-                py2 = (Maze.height - y) * Maze.TILESIZE * Maze.M2PX
+                px = x * tile_px
+                py = (Maze.height - y - 1) * tile_px
 
                 if Maze.is_obstacle(x * Maze.TILESIZE, y * Maze.TILESIZE):
                     tile = Maze.get_edge_tile(x, y)
                     if tile is not None:
-                        img[py:py2, px:px2] = tile
+                        Maze.overlay_transparent(img, tile, px, py)
                     else:
-                        cv2.rectangle(img, (px, py), (px2, py2), (0, 0, 0), -1)
+                        cv2.rectangle(img, (px, py),
+                                      (px + tile_px, py + tile_px),
+                                      (0, 0, 0), -1)
                 else:
-                    img[py:py2, px:px2] = random.choice(TILES[FLOOR])
+                    floor_tile = random.choice(TILES[FLOOR])
+                    Maze.overlay_transparent(img, floor_tile, px, py)
+
+        # Second pass: overlay concave corners (CCV)
+        for y in range(Maze.height):
+            for x in range(Maze.width):
+                if not Maze.is_obstacle(x * Maze.TILESIZE, y * Maze.TILESIZE):
+                    continue
+                px = x * tile_px
+                py = (Maze.height - y - 1) * tile_px
+                for ccv_tile in Maze.get_ccv_overlays(x, y):
+                    Maze.overlay_transparent(img, ccv_tile, px, py)
 
         # Draw goal marker
         if Maze.goal is not None:

@@ -83,7 +83,8 @@ class MazeSimulatorNode(Node):
         # 10 Hz simulation loop
         self.timer = self.create_timer(0.1, self.timer_callback)
 
-        cv2.namedWindow("Maze", cv2.WINDOW_AUTOSIZE)
+        cv2.namedWindow("Maze", cv2.WINDOW_GUI_NORMAL)
+        self._fullscreen = False
         self.get_logger().info('Robomaze simulator started!')
         self.get_logger().info(
             'Publish to /create_robot to spawn a robot, e.g.:')
@@ -154,7 +155,17 @@ class MazeSimulatorNode(Node):
             ranking_msg.data = ranking
             self.winners_pub.publish(ranking_msg)
 
-        Maze.show(self.robots)
+        img = Maze.render(self.robots)
+        cv2.imshow('Maze', img)
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('f'):
+            self._fullscreen = not self._fullscreen
+            if self._fullscreen:
+                cv2.setWindowProperty(
+                    "Maze", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            else:
+                cv2.setWindowProperty(
+                    "Maze", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
 
 
 def main(args=None):
