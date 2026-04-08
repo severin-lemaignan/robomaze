@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RoboMaze</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #111;
+            color: #ccc;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #robot_list {
+            background: #1a1a2e;
+            padding: 8px 16px;
+            min-height: 60px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #333;
+        }
+        #robot_list:empty::after {
+            content: "No robots yet -- use the REST API to create one";
+            color: #666;
+            font-style: italic;
+        }
+        .robotbox {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11pt;
+        }
+        .robotbox img { width: 28px; height: 28px; }
+        .robotbox .life { color: #f88; }
+        .robotbox .age { color: #8cf; font-size: 9pt; }
+        #canvas_wrap {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <section id="robot_list"></section>
+    <section id="canvas_wrap">
+        <canvas id="maze"></canvas>
+    </section>
+    <script src="/static/render_maze.js"></script>
+</body>
+</html>

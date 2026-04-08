@@ -10,7 +10,7 @@ from std_msgs.msg import String
 from ament_index_python.packages import get_package_share_directory
 
 from robomaze.maze import Maze, init_assets
-from robomaze.robot import Robot
+from robomaze.ros_robot import RosRobot
 
 
 class MazeSimulatorNode(Node):
@@ -143,7 +143,7 @@ class MazeSimulatorNode(Node):
         spawn_x, spawn_y = self._find_spawn_position()
         spawn_theta = random.uniform(0, 2 * pi)
 
-        self.robots[name] = Robot(
+        self.robots[name] = RosRobot(
             self, name, spawn_x, spawn_y, spawn_theta)
 
         self.get_logger().info(

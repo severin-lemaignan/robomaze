@@ -334,48 +334,49 @@ class Maze:
         return seed
 
     @staticmethod
-    def get_edge_tile(x, y):
+    def get_edge_tile_type(x, y):
+        """Return the tile type constant for an obstacle cell, or None."""
         up, down, left, right, upleft, upright, downleft, downright = \
             Maze.get_surrounding_obstacles_raw(x, y)
 
         if up and down and left and right:
             return None
         if up and down and left and not right:
-            return TILES[RIGHT]
+            return RIGHT
         if up and down and not left and right:
-            return TILES[LEFT]
+            return LEFT
         if up and not down and left and right:
-            return TILES[BOTTOM]
+            return BOTTOM
         if not up and down and left and right:
-            return TILES[TOP]
+            return TOP
         if up and not down and not left and right:
-            return TILES[BOTTOM_LEFT_CVX]
+            return BOTTOM_LEFT_CVX
         if up and not down and left and not right:
-            return TILES[BOTTOM_RIGHT_CVX]
+            return BOTTOM_RIGHT_CVX
         if not up and down and not left and right:
-            return TILES[TOP_LEFT_CVX]
+            return TOP_LEFT_CVX
         if not up and down and left and not right:
-            return TILES[TOP_RIGHT_CVX]
+            return TOP_RIGHT_CVX
         if not up and not down and left and not right:
-            return TILES[BOTTOM_TOP_RIGHT]
+            return BOTTOM_TOP_RIGHT
         if not up and not down and not left and right:
-            return TILES[BOTTOM_TOP_LEFT]
+            return BOTTOM_TOP_LEFT
         if not up and not down and left and right:
-            return TILES[BOTTOM_TOP]
+            return BOTTOM_TOP
         if up and down and not left and not right:
-            return TILES[LEFT_RIGHT]
+            return LEFT_RIGHT
         if not up and down and not left and not right:
-            return TILES[TOP_LEFT_RIGHT]
+            return TOP_LEFT_RIGHT
         if up and not down and not left and not right:
-            return TILES[BOTTOM_LEFT_RIGHT]
+            return BOTTOM_LEFT_RIGHT
         if not up and not down and not left and not right:
-            return TILES[ISLAND]
+            return ISLAND
 
         return None
 
     @staticmethod
-    def get_ccv_overlays(x, y):
-        """Return list of CCV tiles to overlay on an obstacle cell.
+    def get_ccv_overlay_types(x, y):
+        """Return list of CCV tile type constants to overlay on an obstacle cell.
 
         Concave corners are needed where two adjacent cardinal neighbors
         are obstacles but the diagonal between them is open (not an obstacle).
@@ -385,14 +386,42 @@ class Maze:
 
         overlays = []
         if up and left and not upleft:
-            overlays.append(TILES[TOP_LEFT_CCV])
+            overlays.append(TOP_LEFT_CCV)
         if up and right and not upright:
-            overlays.append(TILES[TOP_RIGHT_CCV])
+            overlays.append(TOP_RIGHT_CCV)
         if down and left and not downleft:
-            overlays.append(TILES[BOTTOM_LEFT_CCV])
+            overlays.append(BOTTOM_LEFT_CCV)
         if down and right and not downright:
-            overlays.append(TILES[BOTTOM_RIGHT_CCV])
+            overlays.append(BOTTOM_RIGHT_CCV)
         return overlays
+
+    @staticmethod
+    def compute_render_map():
+        """Pre-compute tile types for every cell, for use by web renderers.
+
+        Output is in screen order (row 0 = top of screen = highest maze y).
+        Returns a dict with:
+        - tiles: flat list of tile type constants (FLOOR or wall type) per cell
+        - ccv_overlays: list of {idx, types} for cells needing CCV overlays
+        """
+        tiles = []
+        ccv_overlays = []
+        for screen_y in range(Maze.height):
+            maze_y = Maze.height - screen_y - 1
+            for x in range(Maze.width):
+                idx = x + screen_y * Maze.width
+                if Maze.is_obstacle_raw(x, maze_y):
+                    tile_type = Maze.get_edge_tile_type(x, maze_y)
+                    tiles.append(tile_type if tile_type is not None else -1)
+                    ccv_types = Maze.get_ccv_overlay_types(x, maze_y)
+                    if ccv_types:
+                        ccv_overlays.append({
+                            'idx': idx,
+                            'types': ccv_types
+                        })
+                else:
+                    tiles.append(FLOOR)
+        return {'tiles': tiles, 'ccv_overlays': ccv_overlays}
 
     @staticmethod
     def overlay_transparent(background, overlay, x, y):
@@ -460,9 +489,9 @@ class Maze:
                 py = (Maze.height - y - 1) * tile_px
 
                 if Maze.is_obstacle(x * Maze.TILESIZE, y * Maze.TILESIZE):
-                    tile = Maze.get_edge_tile(x, y)
-                    if tile is not None:
-                        Maze.overlay_transparent(img, tile, px, py)
+                    tile_type = Maze.get_edge_tile_type(x, y)
+                    if tile_type is not None:
+                        Maze.overlay_transparent(img, TILES[tile_type], px, py)
                     else:
                         cv2.rectangle(img, (px, py),
                                       (px + tile_px, py + tile_px),
@@ -478,8 +507,8 @@ class Maze:
                     continue
                 px = x * tile_px
                 py = (Maze.height - y - 1) * tile_px
-                for ccv_tile in Maze.get_ccv_overlays(x, y):
-                    Maze.overlay_transparent(img, ccv_tile, px, py)
+                for ccv_type in Maze.get_ccv_overlay_types(x, y):
+                    Maze.overlay_transparent(img, TILES[ccv_type], px, py)
 
         # Draw goal marker
         if Maze.goal is not None:

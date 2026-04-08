@@ -13,13 +13,14 @@ setup(
         ('share/' + package_name + '/res', glob('res/*')),
         ('share/' + package_name + '/cfg', glob('cfg/*')),
     ],
-    install_requires=['setuptools'],
+    install_requires=['setuptools', 'flask'],
     zip_safe=True,
-    description='Interactive 2D maze simulator for ROS2',
+    description='Interactive 2D maze simulator for ROS2 and REST',
     entry_points={
         'console_scripts': [
             'simulator = robomaze.simulator_node:main',
             'keyboard_teleop = robomaze.keyboard_teleop:main',
+            'rest_server = robomaze.rest_server:main',
         ],
     },
 )

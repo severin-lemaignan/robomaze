@@ -1,29 +1,125 @@
-# Robomaze (ROS2)
+# Robomaze
 
-Changes of this branch:
-* Port of robomaze into port 2.
-* Add method of random generator
-* Add visual goal and goal-reached race handling (toggle via args)
-* Remove robots from arena when they reach goal, keep winners ranking
+A 2D maze game for learning robotics programming. Spawn robots, navigate them
+through a maze, and race to the goal!
 
-An interactive 2D maze simulator for ROS2. Spawn robots, control them, and
-access their odometry, laser scans, and TF frames!
+Robomaze offers two modes:
+
+- **REST API mode**: a simple HTTP interface for beginners. Control robots with
+  basic HTTP requests (move North/South/East/West), view the maze in a web
+  browser. Great for an engaging first introduction to programming robots.
+- **ROS2 mode**: a full robotics simulation with continuous velocity control,
+  laser scans, odometry, and TF frames. For a more advanced, gamified
+  introduction to ROS2 and robotics programming.
+
+Both modes share the same maze engine and tileset.
 
 ![Screenshot](doc/screenshot.jpg)
 
 ## Prerequisites
 
-- ROS2 (tested with Jazzy)
 - Python 3
-- Python deps (`pip install -r requirements.txt`)
-  - Or system OpenCV: `sudo apt install python3-opencv`
+- `pip install flask opencv-python numpy` (or system packages: `sudo apt install python3-opencv python3-flask`)
+- For ROS2 mode: ROS2 (tested with Jazzy)
 
-## Build
+---
+
+## REST API mode
+
+The REST mode is the simplest way to get started. No ROS2 required -- just
+Python, Flask, and a web browser.
+
+### Start the server
+
+```bash
+python -m robomaze.rest_server
+```
+
+Options:
+
+```bash
+# Random maze with goal enabled
+python -m robomaze.rest_server --random --goal
+
+# Custom size and seed
+python -m robomaze.rest_server --random --width 31 --height 25 --seed 42 --goal
+
+# Change host/port
+python -m robomaze.rest_server --host 0.0.0.0 --port 8080
+```
+
+### View the maze
+
+Open [http://localhost:5000/live](http://localhost:5000/live) in a browser.
+The maze renders with pan (drag) and zoom (scroll).
+
+### Control robots
+
+Robots are created automatically on their first move:
+
+```bash
+# Move a robot (N/S/E/W)
+curl http://localhost:5000/api/move/WallE/E
+# Returns: [true, [false, true, false, true]]
+#          (success, [obstacle_N, obstacle_S, obstacle_E, obstacle_W])
+
+# Check remaining life
+curl http://localhost:5000/api/life/WallE
+
+# List all robots
+curl http://localhost:5000/api/robots
+```
+
+### REST API reference
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/move/<name>/<dir>` | GET | Move robot one tile (N/S/E/W). Auto-creates on first call. Returns `[success, [N,S,E,W obstacles]]` |
+| `/api/life/<name>` | GET | Remaining life points (0-10) |
+| `/api/robots` | GET | All robots with position, life, and age |
+| `/api/map` | GET | Maze data (dimensions, tile array, goal) |
+| `/api/render_map` | GET | Pre-computed tile types for rendering |
+| `/live` | GET | Web visualization page |
+
+### Game rules (REST mode)
+
+- Robots start with **10 life points**
+- Each collision (moving into a wall) costs **1 life**
+- Minimum **200ms** between moves (rate-limited)
+- Robots are removed after **10 minutes** of inactivity
+- When life reaches 0, the robot is removed
+
+### Writing a REST client
+
+Any language with HTTP support works. A minimal Python example:
+
+```python
+import requests, time
+
+name = "MyBot"
+base = "http://localhost:5000"
+
+for direction in ["E", "E", "N", "N", "E"]:
+    r = requests.get(f"{base}/api/move/{name}/{direction}").json()
+    success, obstacles = r
+    print(f"Move {direction}: {'OK' if success else 'BLOCKED'}, obstacles: {obstacles}")
+    time.sleep(0.3)
+```
+
+---
+
+## ROS2 mode
+
+The ROS2 mode provides a full robotics simulation with continuous physics,
+laser sensors, odometry, and TF -- suitable for learning navigation, SLAM, and
+autonomous robot programming.
+
+### Build
 
 ```bash
 # From your colcon workspace src/ directory:
 cd ~/ros2_ws/src
-ln -s /path/to/robomaze_ros2 robomaze
+ln -s /path/to/robomaze .
 
 # Build
 cd ~/ros2_ws
@@ -31,107 +127,78 @@ colcon build --packages-select robomaze
 source install/setup.bash
 ```
 
-## Usage
-
 ### Start the simulator
 
 ```bash
 ros2 run robomaze simulator
 ```
 
-An OpenCV window will open showing the maze.
+An OpenCV window opens showing the maze. Press **f** to toggle fullscreen.
 
-Notes:
-- Goal is disabled by default.
-- Enable goal with: `--ros-args -p enable_goal:=true`
-
-### Random map generation
-
-Run simulator with parameters:
+Options:
 
 ```bash
-# New random map each run
-ros2 run robomaze simulator --ros-args -p random_maze:=true
-
-# Reproducible random map (same seed => same maze)
-ros2 run robomaze simulator --ros-args -p random_maze:=true -p seed:=1234
-
-# Random map with goal enabled
+# Random maze with goal enabled
 ros2 run robomaze simulator --ros-args -p random_maze:=true -p enable_goal:=true
 
-# Random map with custom size (width x height)
+# Reproducible random maze
+ros2 run robomaze simulator --ros-args -p random_maze:=true -p seed:=1234
+
+# Custom size
 ros2 run robomaze simulator --ros-args -p random_maze:=true -p map_width:=31 -p map_height:=25
 ```
 
-Notes:
-- `random_maze:=false` (default) uses the fixed built-in maze.
-- `seed:=-1` (default) means a random seed is chosen automatically.
-- `enable_goal:=false` (default) disables goal, race finish, and winners updates.
-- `map_width:=20` and `map_height:=20` by default.
-- `map_width`/`map_height` are only used when `random_maze:=true`.
+Parameters:
 
-### Change map size
-
-For random mazes, prefer args:
-
-```bash
-ros2 run robomaze simulator --ros-args -p random_maze:=true -p map_width:=31 -p map_height:=25
-```
-
-You can still hardcode defaults in `robomaze/maze.py`:
-
-```python
-class Maze:
-    height = 20
-    width = 20
-```
-
-Update `height` and `width`, then rebuild:
-
-```bash
-cd ~/ros2_ws
-colcon build --packages-select robomaze
-source install/setup.bash
-```
-
-Tips:
-- Prefer odd values for cleaner random-maze carving.
-- Keep both dimensions `>= 5`.
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `random_maze` | `false` | Generate a random maze instead of the built-in one |
+| `seed` | `-1` | Random seed (-1 = auto) |
+| `enable_goal` | `false` | Enable goal marker and race mode |
+| `map_width` | `20` | Maze width in tiles (only with `random_maze`) |
+| `map_height` | `20` | Maze height in tiles (only with `random_maze`) |
 
 ### Spawn a robot
 
 ```bash
-ros2 topic pub --once /create_robot std_msgs/msg/String "data: 'WallE1'"
+ros2 topic pub --once /create_robot std_msgs/msg/String "data: 'WallE'"
+```
+
+Robots spawn at a random open position away from the goal and other robots.
+
+### Delete a robot
+
+```bash
+ros2 topic pub --once /delete_robot std_msgs/msg/String "data: 'WallE'"
 ```
 
 ### Control with keyboard
 
-In a second terminal:
-
 ```bash
-ros2 run robomaze keyboard_teleop --ros-args -p robot_name:=WallE1
+ros2 run robomaze keyboard_teleop --ros-args -p robot_name:=WallE
 ```
 
 - Arrow up/down: increase/decrease linear speed
 - Arrow left/right: increase/decrease angular speed
 - `q`: quit
 
-## Topic Interface
+### Topic interface
 
 | Topic | Type | Direction | Description |
 |-------|------|-----------|-------------|
-| `/create_robot` | `std_msgs/String` | You publish | Send robot name to spawn |
-| `/<name>/scan` | `sensor_msgs/LaserScan` | Simulator publishes | Lidar: -45 to +45 deg, 2 deg steps |
-| `/<name>/odom` | `nav_msgs/Odometry` | Simulator publishes | Robot pose and velocity |
-| `/<name>/cmd_vel` | `geometry_msgs/Twist` | You publish | `linear.x` and `angular.z` |
-| `/goal_reached` | `std_msgs/String` | Simulator publishes | Robot name that just reached the goal (only when `enable_goal:=true`) |
-| `/winners` | `std_msgs/String` | Simulator publishes | Current ranking, e.g. `#1 WallE1 (12.3s), #2 WallE2 (14.8s)` (only when `enable_goal:=true`) |
+| `/create_robot` | `std_msgs/String` | Subscribe | Send robot name to spawn |
+| `/delete_robot` | `std_msgs/String` | Subscribe | Send robot name to remove |
+| `/<name>/cmd_vel` | `geometry_msgs/Twist` | Subscribe | `linear.x` and `angular.z` |
+| `/<name>/scan` | `sensor_msgs/LaserScan` | Publish | Lidar: -45 to +45 deg, 2 deg steps |
+| `/<name>/odom` | `nav_msgs/Odometry` | Publish | Robot pose and velocity |
+| `/goal_reached` | `std_msgs/String` | Publish | Robot that reached the goal |
+| `/winners` | `std_msgs/String` | Publish | Ranking: `#1 WallE (12.3s), #2 Bot2 (14.8s)` |
 
-### TF Frames
+### TF frames
 
 The simulator broadcasts: `<name>_odom` -> `<name>_base_link`
 
-## Visualize in RViz2
+### Visualize in RViz2
 
 ```bash
 rviz2
