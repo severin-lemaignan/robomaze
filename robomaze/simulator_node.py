@@ -70,9 +70,11 @@ class MazeSimulatorNode(Node):
         self.finished_robots = set()
         self.winners = []
 
-        # Subscribe to robot creation requests
+        # Subscribe to robot creation/deletion requests
         self.create_sub = self.create_subscription(
             String, 'create_robot', self.on_new_robot, 10)
+        self.delete_sub = self.create_subscription(
+            String, 'delete_robot', self.on_delete_robot, 10)
 
         # Publisher for goal reached announcements
         self.goal_pub = self.create_publisher(String, 'goal_reached', 10)
@@ -104,6 +106,19 @@ class MazeSimulatorNode(Node):
             self, name, spawn_x, spawn_y, spawn_theta)
 
         self.get_logger().info(f'Created robot: {name}')
+
+    def on_delete_robot(self, msg):
+        name = msg.data
+        if name not in self.robots:
+            self.get_logger().error(f'Robot <{name}> does not exist!')
+            return
+
+        robot = self.robots.pop(name)
+        self.destroy_publisher(robot.odom_pub)
+        self.destroy_publisher(robot.scan_pub)
+        self.destroy_subscription(robot.cmdvel_sub)
+        self.finished_robots.discard(name)
+        self.get_logger().info(f'Deleted robot: {name}')
 
     def timer_callback(self):
         to_remove = []
