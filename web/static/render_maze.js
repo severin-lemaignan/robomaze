@@ -204,18 +204,21 @@
                 box.className = "robotbox";
                 box.id = name + "_box";
                 box.style.backgroundColor = nameColor(name);
+                const r = robots[name];
+                const ageStr = mmss(r.age) + (r.finished ? " ✓" : "");
                 box.innerHTML =
                     `<b>${name}</b> ` +
-                    `<span class="life">${robots[name].life}</span> ` +
-                    `<span class="age">${mmss(robots[name].age)}</span>`;
+                    `<span class="life">${r.life}</span> ` +
+                    `<span class="age">${ageStr}</span>`;
                 robotListEl.appendChild(box);
             }
         } else {
             for (const name of names) {
                 const box = document.getElementById(name + "_box");
                 if (box) {
-                    box.querySelector(".life").textContent = robots[name].life;
-                    box.querySelector(".age").textContent = mmss(robots[name].age);
+                    const r = robots[name];
+                    box.querySelector(".life").textContent = r.life;
+                    box.querySelector(".age").textContent = mmss(r.age) + (r.finished ? " ✓" : "");
                 }
             }
         }

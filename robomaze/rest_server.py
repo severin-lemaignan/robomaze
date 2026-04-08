@@ -47,6 +47,7 @@ class RestRobot:
         self.life = MAXLIFE
         self.created = time.time()
         self.lastinteraction = 0
+        self.finished_time = None
 
     def get_obstacles(self):
         """Return [N, S, E, W] obstacle booleans for current position."""
@@ -70,12 +71,17 @@ class RestRobot:
         return True, self.get_obstacles()
 
     def to_dict(self):
+        if self.finished_time is not None:
+            age = self.finished_time - self.created
+        else:
+            age = time.time() - self.created
         return {
             'pos': [self.x, self.y],
             'created': self.created,
             'lastinteraction': self.lastinteraction,
             'life': self.life,
-            'age': time.time() - self.created,
+            'age': age,
+            'finished': self.finished_time is not None,
         }
 
 
@@ -134,6 +140,11 @@ def api_move(name, direction):
 
     robot.lastinteraction = now
     success, obstacles = robot.move(direction)
+
+    # Check if robot reached the goal
+    if success and robot.finished_time is None and Maze.goal is not None:
+        if (robot.x, robot.y) == tuple(Maze.goal):
+            robot.finished_time = time.time()
 
     if robot.life <= 0:
         del robots[name]
