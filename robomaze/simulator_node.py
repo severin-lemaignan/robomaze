@@ -1,4 +1,5 @@
 import os
+import random
 import time
 from math import pi
 
@@ -92,21 +93,62 @@ class MazeSimulatorNode(Node):
             "  ros2 topic pub --once /create_robot std_msgs/msg/String "
             "\"data: 'WallE'\"")
 
+    def _find_spawn_position(self, min_dist_goal=3, min_dist_robots=2):
+        """Find a random valid spawn position (in tile coords), far enough
+        from the goal and existing robots.
+
+        Distances are in tiles.
+        """
+        open_tiles = []
+        for y in range(Maze.height):
+            for x in range(Maze.width):
+                if not Maze.is_obstacle_raw(x, y):
+                    open_tiles.append((x, y))
+
+        random.shuffle(open_tiles)
+
+        goal_m = Maze.goal_position_meters()
+        for tx, ty in open_tiles:
+            cx = (tx + 0.5) * Maze.TILESIZE
+            cy = (ty + 0.5) * Maze.TILESIZE
+
+            # Check distance to goal
+            if goal_m is not None:
+                dist = ((cx - goal_m[0]) ** 2 + (cy - goal_m[1]) ** 2) ** 0.5
+                if dist < min_dist_goal * Maze.TILESIZE:
+                    continue
+
+            # Check distance to existing robots
+            too_close = False
+            for robot in self.robots.values():
+                dist = ((cx - robot.x) ** 2 + (cy - robot.y) ** 2) ** 0.5
+                if dist < min_dist_robots * Maze.TILESIZE:
+                    too_close = True
+                    break
+            if too_close:
+                continue
+
+            return cx, cy
+
+        # Fallback: if no tile satisfies constraints, pick any open tile
+        tx, ty = random.choice(open_tiles)
+        return (tx + 0.5) * Maze.TILESIZE, (ty + 0.5) * Maze.TILESIZE
+
     def on_new_robot(self, msg):
         name = msg.data
         if name in self.robots:
             self.get_logger().error(f'Robot <{name}> already exists!')
             return
 
-        # All robots spawn at bottom-left (tile 1,1) for a fair race
-        spawn_x = 1.5 * Maze.TILESIZE
-        spawn_y = 1.5 * Maze.TILESIZE
-        spawn_theta = 0.0
+        spawn_x, spawn_y = self._find_spawn_position()
+        spawn_theta = random.uniform(0, 2 * pi)
 
         self.robots[name] = Robot(
             self, name, spawn_x, spawn_y, spawn_theta)
 
-        self.get_logger().info(f'Created robot: {name}')
+        self.get_logger().info(
+            f'Created robot: {name} at tile '
+            f'({int(spawn_x / Maze.TILESIZE)}, {int(spawn_y / Maze.TILESIZE)})')
 
     def on_delete_robot(self, msg):
         name = msg.data
