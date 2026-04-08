@@ -25,6 +25,7 @@ BOTTOM_LEFT_RIGHT = 16
 TOP_LEFT_RIGHT = 17
 BOTTOM_TOP = 18
 LEFT_RIGHT = 19
+ISLAND = 20
 
 # Tileset grid layout: maps tile constant -> (row, col) in tileset.png
 # Floor variants occupy 3 slots; all other tiles occupy 1 slot each.
@@ -50,6 +51,7 @@ TILESET_POSITIONS = {
     TOP_LEFT_RIGHT: (3, 0),
     BOTTOM_TOP: (3, 1),
     LEFT_RIGHT: (3, 2),
+    ISLAND: (4, 2),
 }
 # Floor variants: list of (row, col) positions
 TILESET_FLOOR_POSITIONS = [(3, 3), (3, 4), (4, 0)]
@@ -64,6 +66,7 @@ TILES = {}
 ROBOT = None
 ROBOT_ALPHA = None
 ROBOT_RGB = None
+TARGET = None
 
 
 def _slice_tile(sheet, row, col):
@@ -78,12 +81,17 @@ def init_assets(res_root):
     Args:
         res_root: path to the res/ directory (with trailing slash)
     """
-    global TILES, ROBOT, ROBOT_ALPHA, ROBOT_RGB
+    global TILES, ROBOT, ROBOT_ALPHA, ROBOT_RGB, TARGET
 
     # Load robot sprite (always a separate file — different size and RGBA)
     ROBOT = cv2.imread(res_root + "walle_top.png", cv2.IMREAD_UNCHANGED)
     ROBOT_ALPHA = ROBOT[:, :, 3]
     ROBOT_RGB = ROBOT[:, :, :3]
+
+    # Load goal target sprite
+    target_path = os.path.join(res_root, "target.png")
+    if os.path.exists(target_path):
+        TARGET = cv2.imread(target_path, cv2.IMREAD_UNCHANGED)
 
     tileset_path = os.path.join(res_root, "tileset.png")
     if os.path.exists(tileset_path):
@@ -360,6 +368,8 @@ class Maze:
             return TILES[TOP_LEFT_RIGHT]
         if up and not down and not left and not right:
             return TILES[BOTTOM_LEFT_RIGHT]
+        if not up and not down and not left and not right:
+            return TILES[ISLAND]
 
         return None
 
@@ -476,12 +486,25 @@ class Maze:
             goal_m = Maze.goal_position_meters()
             gx_px = int(goal_m[0] * Maze.M2PX)
             gy_px = int((Maze.height * Maze.TILESIZE - goal_m[1]) * Maze.M2PX)
-            radius = int(Maze.TILESIZE * Maze.M2PX * 0.35)
-            cv2.circle(img, (gx_px, gy_px), radius, (0, 255, 0), -1)
-            cv2.circle(img, (gx_px, gy_px), radius, (0, 180, 0), 2)
-            cv2.putText(img, "GOAL",
-                        (gx_px - radius, gy_px + radius + 15),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 2)
+            if TARGET is not None:
+                # Scale target so its width matches tile_px, preserve aspect ratio
+                orig_h, orig_w = TARGET.shape[:2]
+                scale = (tile_px * 0.75) / orig_w
+                t_w = int(tile_px * 0.75)
+                t_h = int(orig_h * scale)
+                target_resized = cv2.resize(TARGET, (t_w, t_h))
+                # Center horizontally on goal tile, vertically using width as
+                # the square reference (center of the bottom width x width area)
+                tx = gx_px - t_w // 2
+                ty = gy_px - t_w // 2 - (t_h - t_w)
+                Maze.overlay_transparent(img, target_resized, tx, ty)
+            else:
+                radius = int(Maze.TILESIZE * Maze.M2PX * 0.35)
+                cv2.circle(img, (gx_px, gy_px), radius, (0, 255, 0), -1)
+                cv2.circle(img, (gx_px, gy_px), radius, (0, 180, 0), 2)
+                cv2.putText(img, "GOAL",
+                            (gx_px - radius, gy_px + radius + 15),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 2)
 
         for name, robot in list(robots.items()):
             X = int(robot.x * Maze.M2PX)
