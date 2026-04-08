@@ -492,10 +492,6 @@ class Maze:
                     tile_type = Maze.get_edge_tile_type(x, y)
                     if tile_type is not None:
                         Maze.overlay_transparent(img, TILES[tile_type], px, py)
-                    else:
-                        cv2.rectangle(img, (px, py),
-                                      (px + tile_px, py + tile_px),
-                                      (0, 0, 0), -1)
                 else:
                     floor_tile = random.choice(TILES[FLOOR])
                     Maze.overlay_transparent(img, floor_tile, px, py)

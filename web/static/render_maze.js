@@ -107,11 +107,8 @@
                     drawTileFromPos(mctx, fr, fc, dx, dy, displaySize);
                 } else if (tileType > 0) {
                     drawTile(mctx, tileType, dx, dy, displaySize);
-                } else if (tileType === -1) {
-                    // Fully enclosed wall — black
-                    mctx.fillStyle = "#000";
-                    mctx.fillRect(dx, dy, displaySize, displaySize);
                 }
+                // tileType === -1: fully enclosed wall — leave background visible
             }
         }
 
