@@ -18,14 +18,24 @@ def get_maze_info():
 
 
 def astar(start, goal, maze, maze_size):
+    """Return the shortest path from start to goal using currently-known walls.
 
+    The returned list excludes `start` and includes `goal`. An empty list is
+    returned when no path to the goal exists under the current map.
+    """
+    # cost_to[n] = best known distance from start to n.
     cost_to = {start: 0}
+    # come_from[n] = predecessor of n on the best path found so far.
     come_from = {}
-    nodes_to_visit = [(start, 0)]
+    # Open set: nodes discovered but not yet expanded, paired with their
+    # f-score = cost_to + heuristic-to-goal.
+    nodes_to_visit = [(start, heuristic(start, goal))]
 
     while nodes_to_visit:
         node, _ = pop_best_node(nodes_to_visit)
 
+        # With an admissible heuristic, the first time we pop the goal we
+        # already hold the optimal path to it, so we can stop early.
         if node == goal:
             break
 
@@ -37,17 +47,27 @@ def astar(start, goal, maze, maze_size):
                     (neighbour, cost_to[neighbour] + heuristic(neighbour, goal)))
                 come_from[neighbour] = node
 
-    # Reconstruct path
+    # Walk predecessors from goal back to start to reconstruct the path.
     path = []
     node = goal
     while node in come_from:
-        path = [node] + path
+        path.append(node)
         node = come_from[node]
+    path.reverse()
     return path
 
 
 def heuristic(node, goal):
-    return (node[0] - goal[0]) ** 2 + (node[1] - goal[1]) ** 2
+    """Estimated remaining cost from `node` to `goal`.
+
+    On a 4-connected grid with unit step cost, the correct (admissible)
+    heuristic is the Manhattan distance: the number of moves needed if
+    there were no walls. A* is only guaranteed to return an optimal path
+    when the heuristic never *overestimates* the true cost -- using
+    something like squared Euclidean distance breaks that guarantee and
+    produces visibly zigzagging paths.
+    """
+    return abs(node[0] - goal[0]) + abs(node[1] - goal[1])
 
 
 def pop_best_node(nodes):
@@ -66,6 +86,7 @@ def pop_best_node(nodes):
 
 
 def is_free(node, maze, maze_size):
+    """True if `node` is inside the maze and not a known wall."""
     x, y = node
     w, h = maze_size
     if x < 0 or y < 0 or x >= w or y >= h:
@@ -74,42 +95,41 @@ def is_free(node, maze, maze_size):
 
 
 def neighbours(node, maze, maze_size):
+    """Free 4-connected neighbours of `node`."""
     x, y = node
     return [n for n in [(x, y - 1), (x, y + 1), (x - 1, y), (x + 1, y)]
             if is_free(n, maze, maze_size)]
 
 
 def update_maze(pos, obstacles, maze, maze_size):
-    """Update the maze with newly discovered obstacles around pos."""
-    x, y = pos
+    """Record walls reported by the robot's sensors into our map.
 
-    # obstacles = [N, S, E, W]
-    if obstacles[0]:
-        maze[(y + 1) * maze_size[0] + x] = 1
-    if obstacles[1]:
-        maze[(y - 1) * maze_size[0] + x] = 1
-    if obstacles[2]:
-        maze[y * maze_size[0] + (x + 1)] = 1
-    if obstacles[3]:
-        maze[y * maze_size[0] + (x - 1)] = 1
+    The server's coordinate convention (see robomaze/rest_server.py) is:
+        N = y+1, S = y-1, E = x+1, W = x-1
+    and `obstacles` arrives ordered as [N, S, E, W].
+    """
+    x, y = pos
+    w = maze_size[0]
+
+    if obstacles[0]: maze[(y + 1) * w + x] = 1  # wall to the north
+    if obstacles[1]: maze[(y - 1) * w + x] = 1  # wall to the south
+    if obstacles[2]: maze[y * w + (x + 1)] = 1  # wall to the east
+    if obstacles[3]: maze[y * w + (x - 1)] = 1  # wall to the west
 
 
 def plan_next_move(pos, maze, maze_size, goal):
-    """Run A* and return the direction to move next."""
+    """Run A* and return the direction ('N'/'S'/'E'/'W') of the next step."""
     path = astar(pos, goal, maze, maze_size)
     if not path:
-        return "E"  # fallback
+        return "E"  # fallback: no path known, try moving east and re-plan
 
     x, y = pos
     nx, ny = path[0]
-    if nx - x == 1:
-        return "E"
-    elif nx - x == -1:
-        return "W"
-    elif ny - y == 1:
-        return "N"
-    elif ny - y == -1:
-        return "S"
+
+    if nx == x + 1: return "E"
+    if nx == x - 1: return "W"
+    if ny == y + 1: return "N"
+    if ny == y - 1: return "S"
 
     return "E"
 
